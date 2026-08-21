@@ -1,0 +1,22 @@
+﻿# Секреты и конфиденциальные данные
+.env
+.htpasswd
+*.key
+*.pem
+CONNECTION_DETAILS.txt
+
+# Данные SimpleX
+smp/data/
+smp/logs/
+smp/certificates/
+xftp/data/
+xftp/files/
+xftp/logs/
+turn/logs/
+backups/
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+*.swp
+*.bak
