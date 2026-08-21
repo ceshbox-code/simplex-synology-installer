@@ -1,4 +1,4 @@
-﻿# SimpleX Chat Server Installer for Synology DSM
+# SimpleX Chat Server Installer for Synology DSM
 
 Автоматический установщик серверного стека [SimpleX Chat](https://simplex.chat) для Synology DSM 7.1+.
 
