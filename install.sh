@@ -4,20 +4,6 @@
 # Версия: 9.4 (фикс XFTP init)
 # ==============================================================================
 set -e
-
-# === ВЫБОР ЯЗЫКА / LANGUAGE SELECTION ===
-echo ""
-echo "Выберите язык / Select language:"
-echo "  1) Русский"
-echo "  2) English"
-echo ""
-read -p "Ваш выбор / Your choice [1]: " LANG_CHOICE < /dev/tty
-LANG_CHOICE=${LANG_CHOICE:-1}
-
-if [ "$LANG_CHOICE" = "2" ]; then
-    LANG_EN=true
-else
-    LANG_EN=false
 fi
 
 # Функция для двуязычного вывода
@@ -35,10 +21,10 @@ msg() {
 # поэтому просто сделаем все строки двуязычными через sed ниже.
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
-info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
-success() { echo -e "${GREEN}[ OK ]${NC} $1"; }
-warn()    { echo -e "${YELLOW}[WARN]${NC} $1"; }
-error()   { echo -e "${RED}[ERR ]${NC} $1"; exit 1; }
+info()    { if [ "$LANG_EN" = true ]; then echo -e "${BLUE}[INFO]${NC} $2"; else echo -e "${BLUE}[INFO]${NC} $1"; fi; }
+success() { if [ "$LANG_EN" = true ]; then echo -e "${GREEN}[ OK ]${NC} $2"; else echo -e "${GREEN}[ OK ]${NC} $1"; fi; }
+warn()    { if [ "$LANG_EN" = true ]; then echo -e "${YELLOW}[WARN]${NC} $2"; else echo -e "${YELLOW}[WARN]${NC} $1"; fi; }
+error()   { if [ "$LANG_EN" = true ]; then echo -e "${RED}[ERR ]${NC} $2"; exit 1; else echo -e "${RED}[ERR ]${NC} $1"; exit 1; fi; }
 
 if [ "$(id -u)" -ne 0 ]; then
     error "Скрипт требует прав суперпользователя. Выполните: sudo /bin/bash $0 / Script requires superuser privileges. Run: sudo /bin/bash $0"
