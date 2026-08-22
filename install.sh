@@ -101,7 +101,41 @@ while true; do
         warn "Некорректный выбор. Введите число от 1 до ${#PATHS[@]}. / Invalid choice. Enter a number from 1 to ${#PATHS[@]}."
     fi
 done
-WEB_DIR="${BASE_DIR}/install/www"
+# === ВЫБОР ТОМА ДЛЯ ВЕБ-ФАЙЛОВ (Web Station) ===
+WEB_VOLUMES=()
+WEB_PATHS=()
+idx=1
+for v in /volume*; do
+    if [ -d "$v/web" ]; then
+        WEB_VOLUMES+=("$idx) $v/web/simplex")
+        WEB_PATHS+=("$v/web/simplex")
+        idx=$((idx + 1))
+    fi
+done
+
+if [ ${#WEB_PATHS[@]} -eq 0 ]; then
+    warn "Папка /web не найдена ни на одном томе. Используется /volume1/web/simplex"
+    WEB_DIR="/volume1/web/simplex"
+elif [ ${#WEB_PATHS[@]} -eq 1 ]; then
+    WEB_DIR="${WEB_PATHS[0]}"
+    info "Веб-файлы будут размещены в: $WEB_DIR"
+else
+    echo ""
+    echo "Доступные варианты для веб-файлов (Web Station):"
+    for opt in "${WEB_VOLUMES[@]}"; do echo "  $opt"; done
+    echo ""
+    while true; do
+        read -p "Выберите номер варианта для веб-файлов [1]: " WEB_CHOICE < /dev/tty
+        WEB_CHOICE=${WEB_CHOICE:-1}
+        if [[ "$WEB_CHOICE" =~ ^[0-9]+$ ]] && [ "$WEB_CHOICE" -ge 1 ] && [ "$WEB_CHOICE" -le ${#WEB_PATHS[@]} ]; then
+            WEB_DIR="${WEB_PATHS[$((WEB_CHOICE - 1))]}"
+            break
+        else
+            warn "Некорректный выбор. Введите число от 1 до ${#WEB_PATHS[@]}."
+        fi
+    done
+fi
+mkdir -p "$WEB_DIR"
 
 # === ВЫБОР ТОМА ДЛЯ WEB STATION ===
 WEB_ROOT_OPTIONS=()
@@ -214,7 +248,7 @@ if [ -f "$FAVICON_SOURCE" ]; then
 elif [ ! -s "$WEB_DIR/favicon.ico" ]; then
     info "Загрузка favicon.ico... / Downloading favicon.ico..."
     if curl -fsSL --max-time 20 \
-        "https://install.smp.klenovoe.ru/favicon.ico" \
+        "https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/favicon.ico" \
         -o "$WEB_DIR/favicon.ico" 2>/dev/null; then
         chmod 644 "$WEB_DIR/favicon.ico"
         success "favicon.ico загружен. / favicon.ico downloaded."
@@ -534,7 +568,7 @@ if [ -z "$DOCKER_ROOT" ] && [ -d "/volume1/docker" ]; then
 fi
 [ -z "$DOCKER_ROOT" ] && echo "[ERR] Том docker не найден" && exit 1
 BASE_DIR="${DOCKER_ROOT}/simplex"
-OUT="$BASE_DIR/install/www/status.json"
+OUT="${WEB_DIR}/status.json"
 mkdir -p "$(dirname "$OUT")"
 SMP=$(docker inspect --format='{{.State.Status}}' simplex-smp 2>/dev/null || echo "not_found")
 XFTP=$(docker inspect --format='{{.State.Status}}' simplex-xftp 2>/dev/null || echo "not_found")
@@ -571,7 +605,7 @@ QRCODE_JS="$WEB_DIR/qrcode.min.js"
 if [ ! -s "$QRCODE_JS" ]; then
     info "Загрузка QRCode.js... / Downloading QRCode.js..."
     if curl -fsSL --max-time 20 \
-        "https://install.smp.klenovoe.ru/qrcode.min.js" \
+        "https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/qrcode.min.js" \
         -o "$QRCODE_JS" 2>/dev/null; then
         chmod 644 "$QRCODE_JS"
         success "QRCode.js загружен. / QRCode.js downloaded."
