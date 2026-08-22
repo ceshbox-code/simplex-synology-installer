@@ -1,45 +1,31 @@
 # SimpleX Chat Server Installer for Synology DSM
 
+[English](#english) | [Русский](#russian)
+
+Automatic installer for the [SimpleX Chat](https://simplex.chat) server stack on Synology DSM 7.1+.
 Автоматический установщик серверного стека [SimpleX Chat](https://simplex.chat) для Synology DSM 7.1+.
 
-## Возможности
+---
 
-- ✅ Установка SMP, XFTP, TURN серверов одной командой
-- 🔒 Автоматическая генерация TLS-сертификатов
-- 📊 Веб-панель управления с мониторингом статуса
-- 💾 Скрипт автоматического резервного копирования
-- 📱 Инструкция по установке клиента на смартфон с QR-кодами
-- ⚖️ Правовая информация (ФЗ-149, ФЗ-152)
+<a name="english"></a>
+## 🇬🇧 English
 
-## Требования
+### Features
+- ✅ One-command installation of SMP, XFTP, and TURN servers
+- 🔒 Automatic generation of TLS certificates
+- 📊 Web control panel with status monitoring
+- 💾 Automatic backup script
+- 📱 Client installation guide with QR codes
+- ⚖️ Legal information included
 
-- Synology NAS с DSM 7.1+
-- Docker (Container Manager) установлен через Package Center
-- Доменное имя с настроенными DNS A-записями
-- Проброшенные порты на роутере
-- Минимум 5 ГБ свободного места
+### Requirements
+- Synology NAS with DSM 7.1+
+- Docker (Container Manager) installed via Package Center
+- Domain name with configured DNS A records
+- Ports forwarded on your router
+- At least 5 GB of free space
 
-## Быстрый старт
-
-' + "`" + '``bash
-curl -fsSL https://raw.githubusercontent.com/Azerty/simplex-synology-installer/main/install.sh | sudo /bin/bash
-' + "`" + '``
-
-## Структура файлов
-
-| Файл | Назначение |
-|------|-----------|
-| `install.sh` | Скрипт установки |
-| `www/index.html` | Публичная страница-инструкция |
-| `www/qrsmp.html` | Шаблон панели управления |
-| `www/favicon.ico` | Иконка сайта |
-| `www/qrcode.min.js` | Библиотека генерации QR-кодов |
-
-## Лицензия
-
-MIT License. См. файл [LICENSE](LICENSE).
-
-## Отказ от ответственности
-
-Автор не несёт ответственности за последствия использования скрипта.
-Скрипт предназначен исключительно для личного и семейного использования.
+### Quick Start
+Run this command in SSH (as root):
+```bash
+curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | sudo /bin/bash
