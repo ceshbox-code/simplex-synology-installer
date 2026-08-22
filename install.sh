@@ -472,22 +472,6 @@ cat > "$BACKUP_SCRIPT" << 'BKEOF'
 #!/bin/bash
 set -e
 
-# === ВЫБОР ЯЗЫКА / LANGUAGE SELECTION ===
-echo ""
-echo "Выберите язык / Select language:"
-echo "  1) Русский"
-echo "  2) English"
-echo ""
-read -p "Ваш выбор / Your choice [1]: " LANG_CHOICE < /dev/tty
-LANG_CHOICE=${LANG_CHOICE:-1}
-
-if [ "$LANG_CHOICE" = "2" ]; then
-    LANG_EN=true
-else
-    LANG_EN=false
-fi
-
-# Функция для двуязычного вывода
 # Использование: msg "Русский текст" "English text"
 msg() {
     if [ "$LANG_EN" = true ]; then
@@ -596,7 +580,7 @@ if [ ! -s "$QRCODE_JS" ]; then
         chmod 644 "$QRCODE_JS"
         success "QRCode.js загружен. / QRCode.js downloaded."
     else
-        error "Не удалось загрузить QRCode.js. Проверьте доступность install.smp.klenovoe.ru / Failed to download QRCode.js. Check availability of install.smp.klenovoe.ru"
+        error "Не удалось загрузить QRCode.js. Проверьте доступность GitHub / Failed to download QRCode.js. Check GitHub availability"
     fi
 fi
 chmod 644 "$QRCODE_JS"
