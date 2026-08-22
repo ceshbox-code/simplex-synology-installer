@@ -102,6 +102,35 @@ while true; do
     fi
 done
 WEB_DIR="${BASE_DIR}/install/www"
+
+# === ВЫБОР ТОМА ДЛЯ WEB STATION ===
+WEB_ROOT_OPTIONS=()
+WEB_ROOT_PATHS=()
+widx=1
+for v in /volume*; do
+if [ -d "$v/web" ]; then
+WEB_ROOT_OPTIONS+=("$widx) $v/web/simplex")
+WEB_ROOT_PATHS+=("$v/web/simplex")
+widx=$((widx + 1))
+fi
+done
+
+if [ ${#WEB_ROOT_OPTIONS[@]} -gt 0 ]; then
+echo ""
+echo "Выберите директорию для веб-файлов (Web Station):"
+for opt in "${WEB_ROOT_OPTIONS[@]}"; do echo "  $opt"; done
+echo ""
+read -p "Номер варианта [1]: " WCHOICE < /dev/tty
+WCHOICE=${WCHOICE:-1}
+if [[ "$WCHOICE" =~ ^[0-9]+$ ]] && [ "$WCHOICE" -ge 1 ] && [ "$WCHOICE" -le ${#WEB_ROOT_PATHS[@]} ]; then
+WEB_STATION_DIR="${WEB_ROOT_PATHS[$((WCHOICE - 1))]}"
+else
+WEB_STATION_DIR="/volume1/web/simplex"
+fi
+else
+WEB_STATION_DIR="/volume1/web/simplex"
+fi
+info "Web Station директория: $WEB_STATION_DIR"
 info "Базовая директория: $BASE_DIR / Base directory: $BASE_DIR"
 
 INTERNAL_IP=$(ip route get 1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
@@ -169,6 +198,7 @@ fi
 
 mkdir -p "$BASE_DIR"/{smp/{config,certificates,data,logs},xftp/{config,data,files,logs},turn/logs}
 mkdir -p "$WEB_DIR"
+mkdir -p "$WEB_STATION_DIR"
 mkdir -p "$BASE_DIR/backups"
 
 chown -R 1000:1000 "$BASE_DIR/smp" "$BASE_DIR/xftp"
