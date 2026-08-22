@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="dark" data-lang="ru">
 <head>
 <meta charset="UTF-8">
 <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -53,132 +53,79 @@ pre code{background:none;padding:0;color:var(--text);font-size:.85rem;line-heigh
 .step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;font-size:.8rem;font-weight:700;margin-right:.5rem;flex-shrink:0;vertical-align:middle}
 .toggle-theme{position:fixed;top:1rem;right:1rem;background:var(--card);border:1px solid var(--line);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100;transition:all .3s}
 .toggle-theme:hover{border-color:var(--purple)}
+.lang-toggle{position:fixed;top:1rem;left:1rem;z-index:100;display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.lang-toggle button{padding:.5rem .8rem;font-size:.8rem;font-weight:700;background:transparent;color:var(--muted);border:none;cursor:pointer}
+.lang-toggle button.active{background:var(--purple);color:#fff}
+html[data-lang="ru"] .only-en{display:none}
+html[data-lang="en"] .only-ru{display:none}
 footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);margin-top:2rem}
-@media(max-width:600px){
-  h1{font-size:1.7rem}
-  .container{padding:1.25rem 1rem}
-  .platform-grid{flex-wrap:wrap}
-  .platform-card{flex:1 1 calc(50% - .5rem);min-width:calc(50% - .5rem)}
-  .port-table{font-size:.75rem}
-  .port-table th,.port-table td{padding:.4rem .5rem}
-}
+@media(max-width:600px){h1{font-size:1.7rem}.container{padding:1.25rem 1rem}.platform-grid{flex-wrap:wrap}.platform-card{flex:1 1 calc(50% - .5rem);min-width:calc(50% - .5rem)}.port-table{font-size:.75rem}.port-table th,.port-table td{padding:.4rem .5rem}}
 </style>
 </head>
 <body>
-
-<button class="toggle-theme" onclick="toggleTheme()" aria-label="Переключить тему">
-<svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-</svg>
+<button class="toggle-theme" onclick="toggleTheme()" aria-label="Theme">
+<svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 </button>
-
+<div class="lang-toggle">
+<button id="btn-ru" class="active" onclick="setLang('ru')">RU</button>
+<button id="btn-en" onclick="setLang('en')">EN</button>
+</div>
 <div class="container">
 
+<!-- ==================== РУССКАЯ ВЕРСИЯ ==================== -->
+<div class="only-ru">
 <header>
 <span class="badge">Synology DSM 7.1+</span>
 <h1>SimpleX Chat Server Suite</h1>
 <p class="subtitle">Автоматическое развёртывание SMP, XFTP, TURN на Synology DSM 7.1+.<br>Одна команда — полностью рабочий мессенджер.</p>
-<div class="features">
-<span class="feat">✅ Zero-Config</span>
-<span class="feat">🔒 Self-Signed TLS</span>
-<span class="feat">🐳 Docker Ready</span>
-<span class="feat">⚡ One-Line Install</span>
-<span class="feat">📊 Live Status</span>
-</div>
+<div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span></div>
 </header>
-
-<!-- ============================================================ -->
-<!-- СЕКЦИЯ: УСТАНОВКА КЛИЕНТА НА СМАРТФОН                        -->
-<!-- ============================================================ -->
 <section class="card">
 <h2>📱 Установка SimpleX Chat на смартфон</h2>
 <p>Для работы с вашим приватным сервером необходимо установить клиентское приложение SimpleX Chat. Выберите платформу вашего устройства:</p>
-
 <div class="platform-grid">
-  <a href="https://apps.apple.com/app/simplex-chat/id1605771084" target="_blank" rel="noopener" class="platform-card">
-    <span class="platform-icon">🍎</span>
-    <span class="platform-name">iOS / iPadOS</span>
-    <span class="platform-link">App Store →</span>
-  </a>
-  <a href="https://play.google.com/store/apps/details?id=chat.simplex.app" target="_blank" rel="noopener" class="platform-card">
-    <span class="platform-icon">🤖</span>
-    <span class="platform-name">Android</span>
-    <span class="platform-link">Google Play →</span>
-  </a>
-  <a href="https://f-droid.org/packages/chat.simplex.app/" target="_blank" rel="noopener" class="platform-card">
-    <span class="platform-icon">📦</span>
-    <span class="platform-name">F-Droid</span>
-    <span class="platform-link">F-Droid →</span>
-  </a>
-  <a href="https://github.com/simplex-chat/simplex-chat/releases/latest" target="_blank" rel="noopener" class="platform-card">
-    <span class="platform-icon">💻</span>
-    <span class="platform-name">Desktop</span>
-    <span class="platform-link">GitHub →</span>
-  </a>
+<a href="https://apps.apple.com/app/simplex-chat/id1605771084" target="_blank" rel="noopener" class="platform-card"><span class="platform-icon">🍎</span><span class="platform-name">iOS / iPadOS</span><span class="platform-link">App Store →</span></a>
+<a href="https://play.google.com/store/apps/details?id=chat.simplex.app" target="_blank" rel="noopener" class="platform-card"><span class="platform-icon">🤖</span><span class="platform-name">Android</span><span class="platform-link">Google Play →</span></a>
+<a href="https://f-droid.org/packages/chat.simplex.app/" target="_blank" rel="noopener" class="platform-card"><span class="platform-icon">📦</span><span class="platform-name">F-Droid</span><span class="platform-link">F-Droid →</span></a>
+<a href="https://github.com/simplex-chat/simplex-chat/releases/latest" target="_blank" rel="noopener" class="platform-card"><span class="platform-icon">💻</span><span class="platform-name">Desktop</span><span class="platform-link">GitHub →</span></a>
 </div>
-
 <div class="qr-section">
-  <h3>📷 Быстрая установка через QR-код</h3>
-  <p>Отсканируйте код камерой смартфона для перехода к скачиванию:</p>
-  <div id="download-qr"></div>
-  <p style="font-size:.8rem;margin-top:.75rem;">Код ведёт на официальную страницу загрузки simplex.chat</p>
+<h3>📷 Быстрая установка через QR-код</h3>
+<p>Отсканируйте код камерой смартфона для перехода к скачиванию:</p>
+<div id="download-qr"></div>
+<p style="font-size:.8rem;margin-top:.75rem;">Код ведёт на официальную страницу загрузки simplex.chat</p>
 </div>
-
 <h3>⚙️ Подключение к вашему серверу</h3>
 <p>После установки приложения настройте подключение к вашему личному серверу:</p>
 <ol>
-  <li>Откройте SimpleX Chat и перейдите в <strong>Настройки → Серверы</strong>.</li>
-  <li>Выберите <strong>«Настроить вручную»</strong> или отсканируйте QR-код с адресами SMP/XFTP из панели управления.</li>
-  <li>Введите адреса вашего сервера, полученные при установке.</li>
-  <li>Для звонков добавьте TURN/STUN серверы в разделе <strong>Настройки → Звонки → ICE servers</strong>.</li>
-  <li>Добавьте первый контакт: нажмите <strong>+</strong> → <strong>Пригласить друга</strong> → отсканируйте QR-код собеседника.</li>
+<li>Откройте SimpleX Chat и перейдите в <strong>Настройки → Серверы</strong>.</li>
+<li>Выберите <strong>«Настроить вручную»</strong> или отсканируйте QR-код с адресами SMP/XFTP из панели управления.</li>
+<li>Введите адреса вашего сервера, полученные при установке.</li>
+<li>Для звонков добавьте TURN/STUN серверы в разделе <strong>Настройки → Звонки → ICE servers</strong>.</li>
+<li>Добавьте первый контакт: нажмите <strong>+</strong> → <strong>Пригласить друга</strong> → отсканируйте QR-код собеседника.</li>
 </ol>
 </section>
-
-<!-- ============================================================ -->
-<!-- СЕКЦИЯ: ПРАВОВАЯ ИНФОРМАЦИЯ                                   -->
-<!-- ============================================================ -->
 <section class="card">
 <h2>⚠️ Правовая информация</h2>
 <div class="box warn"><strong>⚠️ Назначение скрипта</strong>Данный скрипт и сопутствующие материалы предназначены исключительно для развёртывания мессенджера SimpleX Chat на собственном оборудовании владельца в целях личного и семейного использования. Скрипт не предназначен для создания публичных сервисов, доступных неограниченному кругу лиц.</div>
-<div class="box info"><strong>📋 Ответственность пользователя</strong>
-<ul>
-<li>Использование скрипта для предоставления сервиса неограниченному кругу лиц может повлечь обязанность регистрации в качестве организатора распространения информации (ОРИ) в соответствии со ст. 10.1 Федерального закона № 149-ФЗ «Об информации, информационных технологиях и о защите информации».</li>
+<div class="box info"><strong>📋 Ответственность пользователя</strong><ul>
+<li>Использование скрипта для предоставления сервиса неограниченному кругу лиц может повлечь обязанность регистрации в качестве организатора распространения информации (ОРИ) в соответствии со ст. 10.1 Федерального закона № 149-ФЗ.</li>
 <li>Обработка персональных данных пользователей регулируется Федеральным законом № 152-ФЗ «О персональных данных».</li>
 <li>Владелец сервера самостоятельно несёт ответственность за соблюдение применимого законодательства, настройку безопасности, резервное копирование и защиту данных.</li>
 <li>Автор скрипта не несёт ответственности за последствия использования, включая сбои, потерю данных или претензии третьих лиц.</li>
 </ul></div>
 <div class="box note"><strong>💡 Рекомендация</strong>Перед развёртыванием сервера для использования за пределами семьи или близких знакомых рекомендуется проконсультироваться с квалифицированным юристом, специализирующимся на информационном праве. Не публикуйте адреса серверов (SMP, XFTP, TURN) и QR-коды в открытом доступе.</div>
 </section>
-
-<!-- ============================================================ -->
-<!-- СЕКЦИЯ: ПОДРОБНАЯ ИНСТРУКЦИЯ ПО УСТАНОВКЕ                     -->
-<!-- ============================================================ -->
 <section class="card">
 <h2>🖥️ Подробная инструкция по установке сервера</h2>
-
 <h3><span class="step-num">1</span> Подготовка NAS</h3>
-
 <h4>1.1 Установка Docker</h4>
-<ol>
-<li>Откройте <strong>Package Center</strong> в DSM.</li>
-<li>В поиске введите <code>Docker</code> (для DSM 7.2+) или <code>Container Manager</code> (для DSM 7.1).</li>
-<li>Нажмите <strong>Установить</strong> и дождитесь завершения.</li>
-<li>После установки откройте Docker/Container Manager хотя бы один раз для завершения инициализации.</li>
-</ol>
-
+<ol><li>Откройте <strong>Package Center</strong> в DSM.</li><li>В поиске введите <code>Docker</code> (для DSM 7.2+) или <code>Container Manager</code> (для DSM 7.1).</li><li>Нажмите <strong>Установить</strong> и дождитесь завершения.</li><li>После установки откройте Docker/Container Manager хотя бы один раз для завершения инициализации.</li></ol>
 <h4>1.2 Включение SSH</h4>
-<ol>
-<li>Откройте <strong>Панель управления → Терминал и SNMP → Терминал</strong>.</li>
-<li>Поставьте галочку <strong>«Включить службу SSH»</strong>.</li>
-<li>Порт: <code>22</code> (или измените на нестандартный для безопасности).</li>
-<li>Нажмите <strong>Применить</strong>.</li>
-</ol>
-
+<ol><li>Откройте <strong>Панель управления → Терминал и SNMP → Терминал</strong>.</li><li>Поставьте галочку <strong>«Включить службу SSH»</strong>.</li><li>Порт: <code>22</code> (или измените на нестандартный для безопасности).</li><li>Нажмите <strong>Применить</strong>.</li></ol>
 <h4>1.3 Проверка свободного места</h4>
 <pre><code>df -h /volume1</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
-<p>Убедитесь, что доступно минимум <strong>5 ГБ</strong> на целевом томе. Если место ограничено, очистите ненужные данные или выберите другой том при установке.</p>
-
+<p>Убедитесь, что доступно минимум <strong>5 ГБ</strong> на целевом томе.</p>
 <h3><span class="step-num">2</span> Настройка DNS-записей</h3>
 <div class="box warn"><strong>⚠️ Важно:</strong> DNS-записи должны быть созданы <strong>ДО</strong> запуска скрипта установки. Распространение DNS может занять от 5 минут до 24 часов.</div>
 <p>У регистратора вашего домена создайте следующие A-записи (замените <code>ваш_внешний_IP</code> на реальный IP):</p>
@@ -195,7 +142,6 @@ dig +short files.ваш-домен.ru
 dig +short turn.ваш-домен.ru
 dig +short info.smp.ваш-домен.ru</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 <p>Все четыре команды должны вернуть ваш внешний IP-адрес.</p>
-
 <h3><span class="step-num">3</span> Настройка проброса портов на роутере</h3>
 <p>Войдите в панель управления роутером и создайте правила проброса (Port Forwarding) на внутренний IP вашего NAS:</p>
 <table class="port-table">
@@ -208,27 +154,15 @@ dig +short info.smp.ваш-домен.ru</code><button class="copy-btn" onclick=
 <tr><td>49152–65535</td><td>UDP</td><td>TURN (медиа-трафик звонков)</td><td>Для звонков</td></tr>
 </table>
 <div class="box note"><strong>💡 Примечание:</strong> Диапазон <code>49152–65535 UDP</code> необходим только для аудио- и видеозвонков. Если звонки не планируются, можно ограничиться портами 3478 и 5349.</div>
-
 <h3><span class="step-num">4</span> Настройка Брандмауэра DSM</h3>
-<ol>
-<li>Откройте <strong>Панель управления → Безопасность → Брандмауэр</strong>.</li>
-<li>Нажмите <strong>Изменить правила</strong> в активном профиле.</li>
-<li>Добавьте правила <strong>Разрешить</strong> для каждого порта из таблицы выше.</li>
-<li>Убедитесь, что правило стоит <strong>выше</strong> правила «Запретить всё» (если такое есть).</li>
-<li>Нажмите <strong>OK → Применить</strong>.</li>
-</ol>
+<ol><li>Откройте <strong>Панель управления → Безопасность → Брандмауэр</strong>.</li><li>Нажмите <strong>Изменить правила</strong> в активном профиле.</li><li>Добавьте правила <strong>Разрешить</strong> для каждого порта из таблицы выше.</li><li>Убедитесь, что правило стоит <strong>выше</strong> правила «Запретить всё» (если такое есть).</li><li>Нажмите <strong>OK → Применить</strong>.</li></ol>
 <div class="box warn"><strong>⚠️ Важно:</strong> После применения правил брандмауэра убедитесь, что вы не потеряли доступ к DSM. Всегда держите открытым второе окно браузера с DSM для отката изменений.</div>
-
 <h3><span class="step-num">5</span> Запуск установки</h3>
 <ol>
-<li>Подключитесь по SSH:
-<pre><code>ssh ваш_логин@IP_вашего_NAS</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
-<li>Получите права суперпользователя:
-<pre><code>sudo -i</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
-<li>Запустите скрипт установки:
-<pre><code>curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | /bin/bash</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
-<li>Ответьте на вопросы скрипта:
-<ul>
+<li>Подключитесь по SSH:<pre><code>ssh ваш_логин@IP_вашего_NAS</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
+<li>Получите права суперпользователя:<pre><code>sudo -i</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
+<li>Запустите скрипт установки:<pre><code>curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | /bin/bash</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
+<li>Ответьте на вопросы скрипта:<ul>
 <li><strong>Базовая директория</strong> — выберите номер тома из предложенного списка (по умолчанию <code>/volume1/docker/simplex</code>).</li>
 <li><strong>Внешний IP</strong> — скрипт определит автоматически, подтвердите или введите вручную.</li>
 <li><strong>Доменное имя</strong> — введите ваш домен, например: <code>ваш-домен.ru</code>.</li>
@@ -236,34 +170,22 @@ dig +short info.smp.ваш-домен.ru</code><button class="copy-btn" onclick=
 </ul></li>
 <li>Дождитесь завершения. Скрипт выполнит создание директорий, сертификатов, загрузку образов, запуск контейнеров и генерацию веб-страниц.</li>
 </ol>
-
 <h3><span class="step-num">6</span> После установки</h3>
-
 <h4>6.1 Сохранение данных подключения</h4>
 <p>Скрипт создаст файл <code>CONNECTION_DETAILS.txt</code> с адресами SMP, XFTP, TURN и паролями:</p>
 <pre><code>cat /volume1/docker/simplex/CONNECTION_DETAILS.txt</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 <div class="box warn"><strong>⚠️ Никому не передавайте этот файл!</strong> Он содержит все секреты вашего сервера.</div>
-
 <h4>6.2 Настройка Web Station</h4>
-<ol>
-<li>Откройте <strong>DSM → Web Station → Настройки веб-сервера</strong>.</li>
-<li>Нажмите <strong>Создать</strong>.</li>
-<li>Заполните параметры:
-<ul>
+<ol><li>Откройте <strong>DSM → Web Station → Настройки веб-сервера</strong>.</li><li>Нажмите <strong>Создать</strong>.</li>
+<li>Заполните параметры:<ul>
 <li><strong>Описание:</strong> <code>SimpleX Control Panel</code></li>
-<li><strong>Сервис портала:</strong> оставьте пустым (или укажите пользовательский портал)</li>
 <li><strong>Корневая папка:</strong> <code>/volume1/docker/simplex/install/www</code></li>
 <li><strong>Веб-сервер:</strong> <code>Apache HTTP Server 2.4</code></li>
 <li><strong>PHP:</strong> <code>Нет</code> (не требуется)</li>
 </ul></li>
 <li>В разделе <strong>URL-адрес</strong> укажите: <code>info.smp.ваш_домен.ru</code></li>
-<li>Нажмите <strong>OK</strong>.</li>
-</ol>
-<div class="box info"><strong>📋 Итоговая конфигурация Web Station:</strong>
-<br>Корневая папка: <code>/volume1/docker/simplex/install/www</code>
-<br>Веб-сервер: <code>Apache HTTP Server 2.4</code>
-<br>URL: <code>info.smp.ваш_домен.ru</code></div>
-
+<li>Нажмите <strong>OK</strong>.</li></ol>
+<div class="box info"><strong>📋 Итоговая конфигурация Web Station:</strong><br>Корневая папка: <code>/volume1/docker/simplex/install/www</code><br>Веб-сервер: <code>Apache HTTP Server 2.4</code><br>URL: <code>info.smp.ваш_домен.ru</code></div>
 <h4>6.3 Пароль веб-панели</h4>
 <p>При установке скрипт выводит логин и пароль для доступа к <code>qrsmp.html</code>. <strong>Пароль показывается только один раз.</strong> Если вы его не сохранили, сбросьте:</p>
 <pre><code># Генерация нового пароля
@@ -271,73 +193,37 @@ NEW_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
 HASH=$(openssl passwd -apr1 "$NEW_PASS")
 printf 'admin:%s\n' "$HASH" > /volume1/docker/simplex/install/www/.htpasswd
 echo "Новый пароль: admin / $NEW_PASS"</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
-
 <h4>6.4 Проверка работоспособности</h4>
-<ol>
-<li>Откройте панель управления: <code>https://info.smp.ваш_домен.ru/qrsmp.html</code></li>
+<ol><li>Откройте панель управления: <code>https://info.smp.ваш_домен.ru/qrsmp.html</code></li>
 <li>Введите логин <code>admin</code> и сохранённый пароль.</li>
 <li>Все три сервиса (SMP, XFTP, TURN) должны отображаться как <strong>«● РАБОТАЕТ»</strong>.</li>
-<li>Если статус отличается — проверьте логи:
-<pre><code>docker logs simplex-smp
+<li>Если статус отличается — проверьте логи:<pre><code>docker logs simplex-smp
 docker logs simplex-xftp
-docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
-</ol>
-
+docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li></ol>
 <h4>6.5 Настройка клиента SimpleX Chat</h4>
-<ol>
-<li><strong>Сообщения и файлы:</strong> откройте панель управления, нажмите «Показать» на адресах SMP и XFTP, скопируйте их. В приложении SimpleX Chat перейдите в <strong>Настройки → Настройки серверов → Настроить вручную</strong> и вставьте адреса.</li>
+<ol><li><strong>Сообщения и файлы:</strong> откройте панель управления, нажмите «Показать» на адресах SMP и XFTP, скопируйте их. В приложении SimpleX Chat перейдите в <strong>Настройки → Настройки серверов → Настроить вручную</strong> и вставьте адреса.</li>
 <li><strong>Звонки (TURN/STUN):</strong> на панели нажмите «Показать» в блоке TURN/STUN, затем «Копировать все». В приложении перейдите в <strong>Настройки → Звонки → ICE servers</strong> и вставьте скопированные строки. Если звонки не требуются — пропустите этот шаг.</li>
-<li><strong>Первый контакт:</strong> нажмите <strong>+</strong> в списке чатов → <strong>Пригласить друга</strong> → отсканируйте QR-код собеседника или отправьте ему ссылку-приглашение.</li>
-</ol>
-
+<li><strong>Первый контакт:</strong> нажмите <strong>+</strong> в списке чатов → <strong>Пригласить друга</strong> → отсканируйте QR-код собеседника или отправьте ему ссылку-приглашение.</li></ol>
 <div class="box info" style="margin-top:1.5rem;text-align:center"><strong>✅ Готово!</strong> Сервер полностью развёрнут и готов к работе.</div>
 </section>
-
-<!-- ============================================================ -->
-<!-- СЕКЦИЯ: ЧТО УСТАНАВЛИВАЕТСЯ                                   -->
-<!-- ============================================================ -->
 <section class="card">
 <h2>📦 Что устанавливается</h2>
 <div class="platform-grid">
-  <div class="platform-card" style="cursor:default">
-    <span class="platform-icon">💬</span>
-    <span class="platform-name">SMP Server</span>
-    <span class="platform-link">Сообщения · 5223/5224</span>
-  </div>
-  <div class="platform-card" style="cursor:default">
-    <span class="platform-icon">📁</span>
-    <span class="platform-name">XFTP Server</span>
-    <span class="platform-link">Файлы · 7788</span>
-  </div>
-  <div class="platform-card" style="cursor:default">
-    <span class="platform-icon">📞</span>
-    <span class="platform-name">TURN / STUN</span>
-    <span class="platform-link">Звонки · 3478, 5349</span>
-  </div>
-  <div class="platform-card" style="cursor:default">
-    <span class="platform-icon">📊</span>
-    <span class="platform-name">Мониторинг</span>
-    <span class="platform-link">Статус · JSON</span>
-  </div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">💬</span><span class="platform-name">SMP Server</span><span class="platform-link">Сообщения · 5223/5224</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📁</span><span class="platform-name">XFTP Server</span><span class="platform-link">Файлы · 7788</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📞</span><span class="platform-name">TURN / STUN</span><span class="platform-link">Звонки · 3478, 5349</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📊</span><span class="platform-name">Мониторинг</span><span class="platform-link">Статус · JSON</span></div>
 </div>
 </section>
-
-<!-- ============================================================ -->
-<!-- СЕКЦИЯ: ТРЕБОВАНИЯ                                            -->
-<!-- ============================================================ -->
 <section class="card">
 <h2>📋 Требования</h2>
 <div class="platform-grid">
-  <div class="platform-card" style="cursor:default"><span class="platform-icon">🌐</span><span class="platform-name">Домен</span><span class="platform-link">С A-записями</span></div>
-  <div class="platform-card" style="cursor:default"><span class="platform-icon">🔓</span><span class="platform-name">Проброс портов</span><span class="platform-link">На роутере</span></div>
-  <div class="platform-card" style="cursor:default"><span class="platform-icon">📧</span><span class="platform-name">Email</span><span class="platform-link">Для уведомлений</span></div>
-  <div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 ГБ</span><span class="platform-link">На /volume1</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">🌐</span><span class="platform-name">Домен</span><span class="platform-link">С A-записями</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">🔓</span><span class="platform-name">Проброс портов</span><span class="platform-link">На роутере</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📧</span><span class="platform-name">Email</span><span class="platform-link">Для уведомлений</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 ГБ</span><span class="platform-link">На /volume1</span></div>
 </div>
 </section>
-
-<!-- ============================================================ -->
-<!-- СЕКЦИЯ: СТРУКТУРА УСТАНОВКИ                                   -->
-<!-- ============================================================ -->
 <section class="card">
 <h2>📂 Структура установки</h2>
 <div class="tree">/volume1/docker/simplex/
@@ -368,10 +254,6 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 ├── .htaccess                     # Авторизация для qrsmp.html
 └── .htpasswd                     # Логин:хэш пароля</div>
 </section>
-
-<!-- ============================================================ -->
-<!-- СЕКЦИЯ: УПРАВЛЕНИЕ СЕРВЕРАМИ                                  -->
-<!-- ============================================================ -->
 <section class="card">
 <h2>🔧 Управление серверами</h2>
 <pre><code># Перейти в папку
@@ -404,10 +286,6 @@ docker compose pull && docker compose up -d
 # Резервное копирование
 /volume1/docker/simplex/simplex-backup.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 </section>
-
-<!-- ============================================================ -->
-<!-- СЕКЦИЯ: АЛЬТЕРНАТИВНЫЕ СПОСОБЫ УСТАНОВКИ                      -->
-<!-- ============================================================ -->
 <section class="card">
 <h2>🔄 Альтернативные способы установки</h2>
 <pre><code># Если curl недоступен
@@ -421,27 +299,267 @@ chmod +x install.sh
 # Локальный файл
 /bin/bash /volume1/public/install.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 </section>
-
 <footer>
 <p>SimpleX Chat Server Installer · Synology DSM 7.1+ · v9.4</p>
 <p style="margin-top:.5rem;font-size:.75rem;">Скрипт: <code>https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh</code></p>
 <p style="margin-top:.25rem;font-size:.75rem;">SimpleX Chat — первый мессенджер без идентификаторов пользователей</p>
 </footer>
+</div>
+
+<!-- ==================== ENGLISH VERSION ==================== -->
+<div class="only-en">
+<header>
+<span class="badge">Synology DSM 7.1+</span>
+<h1>SimpleX Chat Server Suite</h1>
+<p class="subtitle">Automatic deployment of SMP, XFTP, TURN on Synology DSM 7.1+.<br>One command — a fully working messenger.</p>
+<div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span></div>
+</header>
+<section class="card">
+<h2>📱 Install SimpleX Chat on your smartphone</h2>
+<p>To use your private server, install the SimpleX Chat client app. Choose your device platform:</p>
+<div class="platform-grid">
+<a href="https://apps.apple.com/app/simplex-chat/id1605771084" target="_blank" rel="noopener" class="platform-card"><span class="platform-icon">🍎</span><span class="platform-name">iOS / iPadOS</span><span class="platform-link">App Store →</span></a>
+<a href="https://play.google.com/store/apps/details?id=chat.simplex.app" target="_blank" rel="noopener" class="platform-card"><span class="platform-icon">🤖</span><span class="platform-name">Android</span><span class="platform-link">Google Play →</span></a>
+<a href="https://f-droid.org/packages/chat.simplex.app/" target="_blank" rel="noopener" class="platform-card"><span class="platform-icon">📦</span><span class="platform-name">F-Droid</span><span class="platform-link">F-Droid →</span></a>
+<a href="https://github.com/simplex-chat/simplex-chat/releases/latest" target="_blank" rel="noopener" class="platform-card"><span class="platform-icon">💻</span><span class="platform-name">Desktop</span><span class="platform-link">GitHub →</span></a>
+</div>
+<div class="qr-section">
+<h3>📷 Quick install via QR code</h3>
+<p>Scan the code with your smartphone camera to download:</p>
+<div id="download-qr"></div>
+<p style="font-size:.8rem;margin-top:.75rem;">Leads to the official download page simplex.chat</p>
+</div>
+<h3>⚙️ Connect to your server</h3>
+<p>After installing the app, configure the connection to your personal server:</p>
+<ol>
+<li>Open SimpleX Chat and go to <strong>Settings → Servers</strong>.</li>
+<li>Select <strong>“Configure manually”</strong> or scan the QR code with SMP/XFTP addresses from the control panel.</li>
+<li>Enter your server addresses obtained during installation.</li>
+<li>For calls, add TURN/STUN servers in <strong>Settings → Calls → ICE servers</strong>.</li>
+<li>Add your first contact: tap <strong>+</strong> → <strong>Invite a friend</strong> → scan your contact's QR code.</li>
+</ol>
+</section>
+<section class="card">
+<h2>⚠️ Legal information</h2>
+<div class="box warn"><strong>⚠️ Purpose of the script</strong>This script and related materials are intended solely for deploying the SimpleX Chat messenger on the owner's own hardware for personal and family use. The script is not intended for creating public services available to an unlimited circle of persons.</div>
+<div class="box info"><strong>📋 User responsibility</strong><ul>
+<li>Using the script to provide a service to an unlimited circle of persons may entail the obligation to register as an information dissemination organizer (OРИ) in accordance with Art. 10.1 of Federal Law No. 149-FZ.</li>
+<li>Processing of users' personal data is regulated by Federal Law No. 152-FZ “On Personal Data”.</li>
+<li>The server owner is solely responsible for compliance with applicable law, security configuration, backup and data protection.</li>
+<li>The author of the script is not liable for any consequences of use, including failures, data loss or claims of third parties.</li>
+</ul></div>
+<div class="box note"><strong>💡 Recommendation</strong>Before deploying the server for use beyond family or close acquaintances, it is recommended to consult a qualified lawyer specializing in information law. Do not publish server addresses (SMP, XFTP, TURN) and QR codes in public access.</div>
+</section>
+<section class="card">
+<h2>🖥️ Detailed server installation guide</h2>
+<h3><span class="step-num">1</span> NAS preparation</h3>
+<h4>1.1 Install Docker</h4>
+<ol><li>Open <strong>Package Center</strong> in DSM.</li><li>Search for <code>Docker</code> (for DSM 7.2+) or <code>Container Manager</code> (for DSM 7.1).</li><li>Click <strong>Install</strong> and wait for completion.</li><li>After installation, open Docker/Container Manager at least once to complete initialization.</li></ol>
+<h4>1.2 Enable SSH</h4>
+<ol><li>Open <strong>Control Panel → Terminal &amp; SNMP → Terminal</strong>.</li><li>Check <strong>“Enable SSH service”</strong>.</li><li>Port: <code>22</code> (or change to a non-standard one for security).</li><li>Click <strong>Apply</strong>.</li></ol>
+<h4>1.3 Check free space</h4>
+<pre><code>df -h /volume1</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
+<p>Make sure at least <strong>5 GB</strong> is available on the target volume.</p>
+<h3><span class="step-num">2</span> DNS records configuration</h3>
+<div class="box warn"><strong>⚠️ Important:</strong> DNS records must be created <strong>BEFORE</strong> running the installation script. DNS propagation may take from 5 minutes to 24 hours.</div>
+<p>Create the following A records at your domain registrar (replace <code>your_external_IP</code> with the real IP):</p>
+<table class="port-table">
+<tr><th>Subdomain</th><th>Type</th><th>Value</th><th>Purpose</th></tr>
+<tr><td>smp.your-domain.com</td><td>A</td><td>your_external_IP</td><td>SMP server (messages)</td></tr>
+<tr><td>files.your-domain.com</td><td>A</td><td>your_external_IP</td><td>XFTP server (files)</td></tr>
+<tr><td>turn.your-domain.com</td><td>A</td><td>your_external_IP</td><td>TURN/STUN (calls)</td></tr>
+<tr><td>info.smp.your-domain.com</td><td>A</td><td>your_external_IP</td><td>Web control panel</td></tr>
+</table>
+<p>Verify the records:</p>
+<pre><code>dig +short smp.your-domain.com
+dig +short files.your-domain.com
+dig +short turn.your-domain.com
+dig +short info.smp.your-domain.com</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
+<p>All four commands must return your external IP address.</p>
+<h3><span class="step-num">3</span> Router port forwarding</h3>
+<p>Log in to your router's admin panel and create Port Forwarding rules to the internal IP of your NAS:</p>
+<table class="port-table">
+<tr><th>Port</th><th>Protocol</th><th>Purpose</th><th>Required</th></tr>
+<tr><td>5223</td><td>TCP</td><td>SMP (backup port)</td><td>Yes</td></tr>
+<tr><td>5224</td><td>TCP</td><td>SMP (main port, TLS)</td><td>Yes</td></tr>
+<tr><td>7788</td><td>TCP</td><td>XFTP (file transfer, TLS)</td><td>Yes</td></tr>
+<tr><td>3478</td><td>TCP + UDP</td><td>TURN/STUN (connection setup)</td><td>Yes</td></tr>
+<tr><td>5349</td><td>TCP</td><td>TURNS (calls over TLS)</td><td>Yes</td></tr>
+<tr><td>49152–65535</td><td>UDP</td><td>TURN (call media traffic)</td><td>For calls</td></tr>
+</table>
+<div class="box note"><strong>💡 Note:</strong> The range <code>49152–65535 UDP</code> is required only for audio and video calls. If calls are not planned, ports 3478 and 5349 are sufficient.</div>
+<h3><span class="step-num">4</span> DSM Firewall configuration</h3>
+<ol><li>Open <strong>Control Panel → Security → Firewall</strong>.</li><li>Click <strong>Edit Rules</strong> in the active profile.</li><li>Add <strong>Allow</strong> rules for each port from the table above.</li><li>Make sure the rule is <strong>above</strong> the “Deny all” rule (if any).</li><li>Click <strong>OK → Apply</strong>.</li></ol>
+<div class="box warn"><strong>⚠️ Important:</strong> After applying firewall rules, make sure you have not lost access to DSM. Always keep a second browser window with DSM open to roll back changes.</div>
+<h3><span class="step-num">5</span> Run installation</h3>
+<ol>
+<li>Connect via SSH:<pre><code>ssh your_login@NAS_IP</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre></li>
+<li>Get superuser rights:<pre><code>sudo -i</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre></li>
+<li>Run the installation script:<pre><code>curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | /bin/bash</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre></li>
+<li>Answer the script's questions:<ul>
+<li><strong>Base directory</strong> — select the volume number from the list (default <code>/volume1/docker/simplex</code>).</li>
+<li><strong>External IP</strong> — the script detects it automatically; confirm or enter manually.</li>
+<li><strong>Domain name</strong> — enter your domain, e.g.: <code>your-domain.com</code>.</li>
+<li><strong>Email</strong> — for admin notifications (press Enter for the default value).</li>
+</ul></li>
+<li>Wait for completion. The script will create directories, certificates, pull images, start containers and generate web pages.</li>
+</ol>
+<h3><span class="step-num">6</span> After installation</h3>
+<h4>6.1 Save connection details</h4>
+<p>The script creates a <code>CONNECTION_DETAILS.txt</code> file with SMP, XFTP, TURN addresses and passwords:</p>
+<pre><code>cat /volume1/docker/simplex/CONNECTION_DETAILS.txt</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
+<div class="box warn"><strong>⚠️ Do not share this file with anyone!</strong> It contains all the secrets of your server.</div>
+<h4>6.2 Web Station configuration</h4>
+<ol><li>Open <strong>DSM → Web Station → Web Service Portal</strong>.</li><li>Click <strong>Create</strong>.</li>
+<li>Fill in the parameters:<ul>
+<li><strong>Description:</strong> <code>SimpleX Control Panel</code></li>
+<li><strong>Root folder:</strong> <code>/volume1/docker/simplex/install/www</code></li>
+<li><strong>Web server:</strong> <code>Apache HTTP Server 2.4</code></li>
+<li><strong>PHP:</strong> <code>None</code> (not required)</li>
+</ul></li>
+<li>In the <strong>URL</strong> section specify: <code>info.smp.your_domain.com</code></li>
+<li>Click <strong>OK</strong>.</li></ol>
+<div class="box info"><strong>📋 Final Web Station configuration:</strong><br>Root folder: <code>/volume1/docker/simplex/install/www</code><br>Web server: <code>Apache HTTP Server 2.4</code><br>URL: <code>info.smp.your_domain.com</code></div>
+<h4>6.3 Web panel password</h4>
+<p>During installation the script prints the login and password for <code>qrsmp.html</code>. <strong>The password is shown only once.</strong> If you did not save it, reset it:</p>
+<pre><code># Generate a new password
+NEW_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
+HASH=$(openssl passwd -apr1 "$NEW_PASS")
+printf 'admin:%s\n' "$HASH" > /volume1/docker/simplex/install/www/.htpasswd
+echo "New password: admin / $NEW_PASS"</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
+<h4>6.4 Verify operation</h4>
+<ol><li>Open the control panel: <code>https://info.smp.your_domain.com/qrsmp.html</code></li>
+<li>Enter login <code>admin</code> and the saved password.</li>
+<li>All three services (SMP, XFTP, TURN) must show <strong>“● RUNNING”</strong>.</li>
+<li>If the status differs — check the logs:<pre><code>docker logs simplex-smp
+docker logs simplex-xftp
+docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre></li></ol>
+<h4>6.5 SimpleX Chat client configuration</h4>
+<ol><li><strong>Messages and files:</strong> open the control panel, click “Show” on the SMP and XFTP addresses and copy them. In the SimpleX Chat app go to <strong>Settings → Server settings → Configure manually</strong> and paste the addresses.</li>
+<li><strong>Calls (TURN/STUN):</strong> on the panel click “Show” in the TURN/STUN block, then “Copy all”. In the app go to <strong>Settings → Calls → ICE servers</strong> and paste the copied lines. Skip this step if calls are not needed.</li>
+<li><strong>First contact:</strong> tap <strong>+</strong> in the chat list → <strong>Invite a friend</strong> → scan your contact's QR code or send them an invitation link.</li></ol>
+<div class="box info" style="margin-top:1.5rem;text-align:center"><strong>✅ Done!</strong> The server is fully deployed and ready to use.</div>
+</section>
+<section class="card">
+<h2>📦 What gets installed</h2>
+<div class="platform-grid">
+<div class="platform-card" style="cursor:default"><span class="platform-icon">💬</span><span class="platform-name">SMP Server</span><span class="platform-link">Messages · 5223/5224</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📁</span><span class="platform-name">XFTP Server</span><span class="platform-link">Files · 7788</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📞</span><span class="platform-name">TURN / STUN</span><span class="platform-link">Calls · 3478, 5349</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📊</span><span class="platform-name">Monitoring</span><span class="platform-link">Status · JSON</span></div>
+</div>
+</section>
+<section class="card">
+<h2>📋 Requirements</h2>
+<div class="platform-grid">
+<div class="platform-card" style="cursor:default"><span class="platform-icon">🌐</span><span class="platform-name">Domain</span><span class="platform-link">With A records</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">🔓</span><span class="platform-name">Port forwarding</span><span class="platform-link">On the router</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📧</span><span class="platform-name">Email</span><span class="platform-link">For notifications</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 GB</span><span class="platform-link">On /volume1</span></div>
+</div>
+</section>
+<section class="card">
+<h2>📂 Installation structure</h2>
+<div class="tree">/volume1/docker/simplex/
+├── .env                          # Passwords and variables
+├── docker-compose.yml            # Docker Compose
+├── CONNECTION_DETAILS.txt        # Client connection details
+├── simplex-backup.sh             # Backup script
+├── status-update.sh              # Status update script
+├── smp/
+│   ├── config/                   # Keys, certificates, fingerprint
+│   ├── certificates/             # TLS certificates
+│   ├── data/                     # Store log
+│   └── logs/
+├── xftp/
+│   ├── config/                   # Configuration and fingerprint
+│   ├── data/
+│   ├── files/                    # Uploaded files
+│   └── logs/
+└── turn/
+    └── logs/
+
+/volume1/docker/simplex/install/www/
+├── index.html                    # This page (installer)
+├── qrsmp.html                    # Control panel (protected)
+├── status.json                   # Container status (updated)
+├── qrcode.min.js                 # QR code library
+├── favicon.ico                   # Site icon
+├── .htaccess                     # Authorization for qrsmp.html
+└── .htpasswd                     # Login:password hash</div>
+</section>
+<section class="card">
+<h2>🔧 Server management</h2>
+<pre><code># Go to the folder
+cd /volume1/docker/simplex
+
+# Container status
+docker compose ps
+
+# Stop all servers
+docker compose down
+
+# Start all servers
+docker compose up -d
+
+# SMP logs
+docker logs simplex-smp
+
+# XFTP logs
+docker logs simplex-xftp
+
+# TURN logs
+docker logs simplex-turn
+
+# Update images and restart
+docker compose pull && docker compose up -d
+
+# Manual status update
+/volume1/docker/simplex/status-update.sh
+
+# Backup
+/volume1/docker/simplex/simplex-backup.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
+</section>
+<section class="card">
+<h2>🔄 Alternative installation methods</h2>
+<pre><code># If curl is not available
+wget -O- https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | /bin/bash
+
+# Download and run manually
+curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh -o install.sh
+chmod +x install.sh
+/bin/bash install.sh
+
+# Local file
+/bin/bash /volume1/public/install.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
+</section>
+<footer>
+<p>SimpleX Chat Server Installer · Synology DSM 7.1+ · v9.4</p>
+<p style="margin-top:.5rem;font-size:.75rem;">Script: <code>https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh</code></p>
+<p style="margin-top:.25rem;font-size:.75rem;">SimpleX Chat — the first messenger without user identifiers</p>
+</footer>
+</div>
 
 </div>
 
 <script src="qrcode.min.js"></script>
 <script>
-// Генерация QR-кода для скачивания SimpleX Chat
-new QRCode(document.getElementById('download-qr'), {
-  text: 'https://simplex.chat',
-  width: 200,
-  height: 200,
-  colorDark: '#000000',
-  colorLight: '#ffffff',
-  correctLevel: QRCode.CorrectLevel.M
+// Генерация QR-кодов для обеих языковых копий / QR generation for both language copies
+var qrBlocks=document.querySelectorAll('#download-qr, .only-en #download-qr');
+document.querySelectorAll('[id="download-qr"]').forEach(function(el){
+  new QRCode(el,{text:'https://simplex.chat',width:200,height:200,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
 });
-
+// Переключатель языка / Language switcher
+function setLang(l){
+  document.documentElement.setAttribute('data-lang',l);
+  document.documentElement.lang=l;
+  localStorage.setItem('simplex-lang',l);
+  document.getElementById('btn-ru').classList.toggle('active',l==='ru');
+  document.getElementById('btn-en').classList.toggle('active',l==='en');
+}
+var savedLang=localStorage.getItem('simplex-lang')||'ru';
+setLang(savedLang);
+// Переключатель темы / Theme switcher
 function toggleTheme(){
   const current=document.documentElement.getAttribute('data-theme');
   const next=current==='dark'?'light':'dark';
@@ -460,15 +578,14 @@ function updateIcon(theme){
 function copyCmd(btn){
   const code=btn.parentElement.querySelector('code').textContent;
   if(navigator.clipboard&&window.isSecureContext){
-    navigator.clipboard.writeText(code).then(()=>{btn.textContent='✅ Скопировано';setTimeout(()=>btn.textContent='📋 Копировать',2000)});
+    navigator.clipboard.writeText(code).then(()=>{btn.textContent='✅';setTimeout(()=>btn.textContent='📋',2000)});
   }else{
     const ta=document.createElement('textarea');ta.value=code;ta.style.cssText='position:fixed;opacity:0';
     document.body.appendChild(ta);ta.select();
-    try{document.execCommand('copy');btn.textContent='✅ Скопировано';setTimeout(()=>btn.textContent='📋 Копировать',2000)}catch(e){}
+    try{document.execCommand('copy');btn.textContent='✅';setTimeout(()=>btn.textContent='📋',2000)}catch(e){}
     ta.remove();
   }
 }
-// Инициализация темы
 const saved=localStorage.getItem('simplex-theme')||'dark';
 document.documentElement.setAttribute('data-theme',saved);
 updateIcon(saved);
