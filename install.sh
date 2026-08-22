@@ -58,6 +58,14 @@ fi
 echo ""
 echo "=========================================="
 echo "  SIMPLEX CHAT INSTALLER v9.4 — SYNOLOGY"
+echo ""
+echo "Выберите язык / Select language:"
+echo "  1) Русский"
+echo "  2) English"
+echo ""
+read -p "Ваш выбор / Your choice [1]: " LANG_CHOICE < /dev/tty
+LANG_CHOICE=${LANG_CHOICE:-1}
+if [ "$LANG_CHOICE" = "2" ]; then LANG_EN=true; else LANG_EN=false; fi
 echo "=========================================="
 echo ""
 
@@ -718,7 +726,7 @@ h1{margin:0 0 .5rem;font-size:1.6rem;letter-spacing:-.5px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 28px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:12px;font-size:.95rem;font-weight:700;text-decoration:none;cursor:pointer;transition:transform .15s,opacity .15s;margin-bottom:1rem}
 .btn:hover{opacity:.9}.btn:active{transform:scale(.97)}
 .footer{margin-top:1.5rem;font-size:.7rem;color:var(--muted)}
-.toggle{position:absolute;top:1rem;right:1rem;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;display:grid;place-items:center}
+.toggle{position:fixed;top:1rem;right:1rem;width:44px;height:44px;border-radius:50%;border:2px solid #d1d5db;background:#a78bfa;color:#ffffff;cursor:pointer;display:grid;place-items:center;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .toggle svg{width:16px;color:var(--text)}[data-theme="dark"] .toggle svg{color:#fff}[data-theme="light"] .toggle svg{color:#1a1528}
 @media(max-width:400px){.platform-grid{flex-wrap:wrap}.platform-card{flex:1 1 calc(50% - .35rem);min-width:calc(50% - .35rem)}}
 </style>
