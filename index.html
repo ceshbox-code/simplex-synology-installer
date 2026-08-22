@@ -162,7 +162,8 @@ dig +short info.smp.ваш-домен.ru</code><button class="copy-btn" onclick=
 <li>Подключитесь по SSH:<pre><code>ssh ваш_логин@IP_вашего_NAS</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
 <li>Получите права суперпользователя:<pre><code>sudo -i</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
 <li>Запустите скрипт установки:<pre><code>curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | /bin/bash</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre></li>
-<li>Ответьте на вопросы скрипта:<ul>
+<li>Ответьте на вопросы скрипта (первый вопрос — выбор языка):<ul>
+<li><strong>Язык интерфейса</strong> — выберите 1 для русского или 2 для английского.</li>
 <li><strong>Базовая директория</strong> — выберите номер тома из предложенного списка (по умолчанию <code>/volume1/docker/simplex</code>).</li>
 <li><strong>Внешний IP</strong> — скрипт определит автоматически, подтвердите или введите вручную.</li>
 <li><strong>Доменное имя</strong> — введите ваш домен, например: <code>ваш-домен.ru</code>.</li>
