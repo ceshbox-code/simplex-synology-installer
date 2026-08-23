@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#0c0a14">
 <title>SimpleX Installer — Synology DSM</title>
 <style>
-[data-theme="dark"]{--bg:#0c0a14;--card:#1a1528;--text:#f5f3fa;--muted:#9d8fb8;--purple:#8B5CF6;--accent:#a78bfa;--line:rgba(139,92,246,.12);--btn-bg:#8B5CF6;--btn-text:#fff;--code-bg:rgba(0,0,0,.3);--warn-bg:rgba(248,113,113,.07);--warn-bd:rgba(248,113,113,.16);--warn-t:#fca5a5;--info-bg:rgba(139,92,246,.06);--note-bg:rgba(139,92,246,.04)}
-[data-theme="light"]{--bg:#f4f1fa;--card:#fff;--text:#1a1528;--muted:#6b5f85;--purple:#7C3AED;--accent:#6d28d9;--line:rgba(139,92,246,.14);--btn-bg:#7C3AED;--btn-text:#fff;--code-bg:rgba(139,92,246,.06);--warn-bg:rgba(220,38,38,.05);--warn-bd:rgba(220,38,38,.14);--warn-t:#b91c1c;--info-bg:rgba(139,92,246,.06);--note-bg:rgba(139,92,246,.04)}
+[data-theme="dark"]{--bg:#0c0a14;--card:#1a1528;--text:#f5f3fa;--muted:#9d8fb8;--purple:#8B5CF6;--accent:#a78bfa;--line:rgba(139,92,246,.12);--code-bg:rgba(0,0,0,.3);--warn-bg:rgba(248,113,113,.07);--warn-bd:rgba(248,113,113,.16);--warn-t:#fca5a5;--info-bg:rgba(139,92,246,.06);--note-bg:rgba(139,92,246,.04)}
+[data-theme="light"]{--bg:#f4f1fa;--card:#fff;--text:#1a1528;--muted:#6b5f85;--purple:#7C3AED;--accent:#6d28d9;--line:rgba(139,92,246,.14);--code-bg:rgba(139,92,246,.06);--warn-bg:rgba(220,38,38,.05);--warn-bd:rgba(220,38,38,.14);--warn-t:#b91c1c;--info-bg:rgba(139,92,246,.06);--note-bg:rgba(139,92,246,.04)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;transition:background .3s,color .3s}
 .container{max-width:820px;margin:0 auto;padding:2rem 1.5rem}
@@ -19,7 +19,7 @@ h1{font-size:2.2rem;margin-bottom:.5rem;background:linear-gradient(135deg,var(--
 .features{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin-top:1rem}
 .feat{padding:.3rem .7rem;border-radius:8px;font-size:.75rem;font-weight:600;background:var(--info-bg);border:1px solid var(--line);color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:1.75rem;margin-bottom:1.5rem;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-h2{font-size:1.4rem;margin-bottom:1rem;color:var(--purple);display:flex;align-items:center;gap:.5rem}
+h2{font-size:1.4rem;margin-bottom:1rem;color:var(--purple)}
 h3{font-size:1.1rem;margin:1.25rem 0 .6rem;color:var(--accent)}
 h4{font-size:.95rem;margin:1rem 0 .4rem;color:var(--text);font-weight:700}
 p{margin-bottom:.75rem;color:var(--muted);font-size:.95rem}
@@ -28,17 +28,17 @@ li{margin-bottom:.4rem}
 code{background:var(--code-bg);padding:.15rem .4rem;border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85em;color:var(--purple)}
 pre{background:var(--code-bg);padding:1rem;border-radius:10px;overflow-x:auto;margin:.75rem 0;border:1px solid var(--line);position:relative}
 pre code{background:none;padding:0;color:var(--text);font-size:.85rem;line-height:1.5}
-.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--purple);color:#fff;border:none;border-radius:6px;padding:.3rem .6rem;font-size:.7rem;font-weight:600;cursor:pointer;opacity:.7;transition:opacity .2s}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--purple);color:#fff;border:none;border-radius:6px;padding:.3rem .6rem;font-size:.7rem;font-weight:600;cursor:pointer;opacity:.7}
 .copy-btn:hover{opacity:1}
 .platform-grid{display:flex;flex-wrap:nowrap;gap:.75rem;margin:1.25rem 0}
 .platform-card{flex:1 1 0;min-width:0;background:var(--info-bg);border:1px solid var(--line);border-radius:12px;padding:1.25rem .75rem;text-align:center;transition:transform .2s,border-color .2s;text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .platform-card:hover{transform:translateY(-2px);border-color:var(--purple)}
 .platform-icon{font-size:2rem;margin-bottom:.5rem;display:block;line-height:1}
-.platform-name{font-weight:700;color:var(--text);display:block;margin-bottom:.3rem;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+.platform-name{font-weight:700;color:var(--text);display:block;margin-bottom:.3rem;font-size:.9rem}
 .platform-link{color:var(--purple);font-size:.75rem;font-weight:500;white-space:nowrap}
 .qr-section{text-align:center;margin:1.5rem 0;padding:1.5rem;background:var(--note-bg);border-radius:14px;border:1px dashed var(--line)}
-#download-qr{display:inline-block;margin:1rem auto;padding:12px;background:#fff;border-radius:12px}
-#download-qr img,#download-qr canvas{display:block;border-radius:8px}
+.qr-wrap{display:inline-block;margin:1rem auto;padding:12px;background:#fff;border-radius:12px}
+.qr-wrap img,.qr-wrap canvas{display:block;border-radius:8px}
 .box{padding:1rem 1.25rem;border-radius:10px;font-size:.9rem;line-height:1.6;margin:.75rem 0}
 .box strong{display:block;margin-bottom:.3rem;font-size:.95rem}
 .box.warn{background:var(--warn-bg);border:1px solid var(--warn-bd);color:var(--warn-t)}
@@ -50,21 +50,22 @@ pre code{background:none;padding:0;color:var(--text);font-size:.85rem;line-heigh
 .port-table td{color:var(--muted)}
 .port-table td:first-child{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--text);font-weight:600;white-space:nowrap}
 .tree{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:1rem 1.25rem;font:0.8rem/1.6 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);white-space:pre;overflow-x:auto;margin:.75rem 0}
-.step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;font-size:.8rem;font-weight:700;margin-right:.5rem;flex-shrink:0;vertical-align:middle}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;font-size:.8rem;font-weight:700;margin-right:.5rem;vertical-align:middle}
 .toggle-theme{position:fixed;top:1rem;right:1rem;width:44px;height:44px;border-radius:50%;border:2px solid #d1d5db;background:#a78bfa;color:#ffffff;cursor:pointer;display:grid;place-items:center;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.4)}
-.toggle-theme:hover{border-color:var(--purple)}
+.toggle-theme svg{width:22px;height:22px;color:#ffffff}
 .lang-toggle{position:fixed;top:1rem;left:1rem;z-index:100;display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
 .lang-toggle button{padding:.5rem .8rem;font-size:.8rem;font-weight:700;background:transparent;color:var(--muted);border:none;cursor:pointer}
 .lang-toggle button.active{background:var(--purple);color:#fff}
 html[data-lang="ru"] .only-en{display:none}
 html[data-lang="en"] .only-ru{display:none}
 footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);margin-top:2rem}
-@media(max-width:600px){h1{font-size:1.7rem}.container{padding:1.25rem 1rem}.platform-grid{flex-wrap:wrap}.platform-card{flex:1 1 calc(50% - .5rem);min-width:calc(50% - .5rem)}.port-table{font-size:.75rem}.port-table th,.port-table td{padding:.4rem .5rem}}
+@media(max-width:600px){h1{font-size:1.7rem}.container{padding:1.25rem 1rem}.platform-grid{flex-wrap:wrap}.platform-card{flex:1 1 calc(50% - .5rem);min-width:calc(50% - .5rem)}}
 </style>
 </head>
 <body>
 <button class="toggle-theme" onclick="toggleTheme()" aria-label="Theme">
-<svg id="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+<svg id="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+<svg id="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
 </button>
 <div class="lang-toggle">
 <button id="btn-ru" class="active" onclick="setLang('ru')">RU</button>
@@ -78,7 +79,7 @@ footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;
 <span class="badge">Synology DSM 7.1+</span>
 <h1>SimpleX Chat Server Suite</h1>
 <p class="subtitle">Автоматическое развёртывание SMP, XFTP, TURN на Synology DSM 7.1+.<br>Одна команда — полностью рабочий мессенджер.</p>
-<div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span></div>
+<div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span><span class="feat">🌐 RU / EN</span></div>
 </header>
 <section class="card">
 <h2>📱 Установка SimpleX Chat на смартфон</h2>
@@ -92,7 +93,7 @@ footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;
 <div class="qr-section">
 <h3>📷 Быстрая установка через QR-код</h3>
 <p>Отсканируйте код камерой смартфона для перехода к скачиванию:</p>
-<div id="download-qr"></div>
+<div class="qr-wrap download-qr"></div>
 <p style="font-size:.8rem;margin-top:.75rem;">Код ведёт на официальную страницу загрузки simplex.chat</p>
 </div>
 <h3>⚙️ Подключение к вашему серверу</h3>
@@ -165,34 +166,35 @@ dig +short info.smp.ваш-домен.ru</code><button class="copy-btn" onclick=
 <li>Ответьте на вопросы скрипта (первый вопрос — выбор языка):<ul>
 <li><strong>Язык интерфейса</strong> — выберите 1 для русского или 2 для английского.</li>
 <li><strong>Базовая директория</strong> — выберите номер тома из предложенного списка (по умолчанию <code>/volume1/docker/simplex</code>).</li>
+<li><strong>Каталог веб-файлов</strong> — выберите том с папкой <code>web</code> для файлов панели управления (например, <code>/volume1/web/simplex</code>).</li>
 <li><strong>Внешний IP</strong> — скрипт определит автоматически, подтвердите или введите вручную.</li>
 <li><strong>Доменное имя</strong> — введите ваш домен, например: <code>ваш-домен.ru</code>.</li>
 <li><strong>Email</strong> — для уведомлений администратора (можно нажать Enter для значения по умолчанию).</li>
 </ul></li>
-<li>Дождитесь завершения. Скрипт выполнит создание директорий, сертификатов, загрузку образов, запуск контейнеров и генерацию веб-страниц.</li>
+<li>Дождитесь завершения. Скрипт выполнит создание директорий, сертификатов, загрузку зафиксированных версий образов (SMP/XFTP <code>v6.5.2</code>, coturn <code>4.6.3-r0</code>), запуск контейнеров и генерацию веб-страниц.</li>
 </ol>
 <h3><span class="step-num">6</span> После установки</h3>
 <h4>6.1 Сохранение данных подключения</h4>
-<p>Скрипт создаст файл <code>CONNECTION_DETAILS.txt</code> с адресами SMP, XFTP, TURN и паролями:</p>
+<p>Скрипт создаст файл <code>CONNECTION_DETAILS.txt</code> с адресами SMP, XFTP, TURN и паролями (путь зависит от выбранного тома):</p>
 <pre><code>cat /volume1/docker/simplex/CONNECTION_DETAILS.txt</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 <div class="box warn"><strong>⚠️ Никому не передавайте этот файл!</strong> Он содержит все секреты вашего сервера.</div>
 <h4>6.2 Настройка Web Station</h4>
 <ol><li>Откройте <strong>DSM → Web Station → Настройки веб-сервера</strong>.</li><li>Нажмите <strong>Создать</strong>.</li>
 <li>Заполните параметры:<ul>
 <li><strong>Описание:</strong> <code>SimpleX Control Panel</code></li>
-<li><strong>Корневая папка:</strong> <code>/volume1/docker/simplex/install/www</code></li>
+<li><strong>Корневая папка:</strong> <code>/volume1/web/simplex</code> (том, который вы выбрали при установке на шаге 5)</li>
 <li><strong>Веб-сервер:</strong> <code>Apache HTTP Server 2.4</code></li>
 <li><strong>PHP:</strong> <code>Нет</code> (не требуется)</li>
 </ul></li>
 <li>В разделе <strong>URL-адрес</strong> укажите: <code>info.smp.ваш_домен.ru</code></li>
 <li>Нажмите <strong>OK</strong>.</li></ol>
-<div class="box info"><strong>📋 Итоговая конфигурация Web Station:</strong><br>Корневая папка: <code>/volume1/docker/simplex/install/www</code><br>Веб-сервер: <code>Apache HTTP Server 2.4</code><br>URL: <code>info.smp.ваш_домен.ru</code></div>
+<div class="box info"><strong>📋 Итоговая конфигурация Web Station:</strong><br>Корневая папка: <code>/volume1/web/simplex</code><br>Веб-сервер: <code>Apache HTTP Server 2.4</code><br>URL: <code>info.smp.ваш_домен.ru</code></div>
 <h4>6.3 Пароль веб-панели</h4>
 <p>При установке скрипт выводит логин и пароль для доступа к <code>qrsmp.html</code>. <strong>Пароль показывается только один раз.</strong> Если вы его не сохранили, сбросьте:</p>
 <pre><code># Генерация нового пароля
 NEW_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
 HASH=$(openssl passwd -apr1 "$NEW_PASS")
-printf 'admin:%s\n' "$HASH" > /volume1/docker/simplex/install/www/.htpasswd
+printf 'admin:%s\n' "$HASH" > /volume1/web/simplex/.htpasswd
 echo "Новый пароль: admin / $NEW_PASS"</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 <h4>6.4 Проверка работоспособности</h4>
 <ol><li>Откройте панель управления: <code>https://info.smp.ваш_домен.ru/qrsmp.html</code></li>
@@ -210,9 +212,9 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <section class="card">
 <h2>📦 Что устанавливается</h2>
 <div class="platform-grid">
-<div class="platform-card" style="cursor:default"><span class="platform-icon">💬</span><span class="platform-name">SMP Server</span><span class="platform-link">Сообщения · 5223/5224</span></div>
-<div class="platform-card" style="cursor:default"><span class="platform-icon">📁</span><span class="platform-name">XFTP Server</span><span class="platform-link">Файлы · 7788</span></div>
-<div class="platform-card" style="cursor:default"><span class="platform-icon">📞</span><span class="platform-name">TURN / STUN</span><span class="platform-link">Звонки · 3478, 5349</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">💬</span><span class="platform-name">SMP Server v6.5.2</span><span class="platform-link">Сообщения · 5223/5224</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📁</span><span class="platform-name">XFTP Server v6.5.2</span><span class="platform-link">Файлы · 7788</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📞</span><span class="platform-name">coturn 4.6.3-r0</span><span class="platform-link">Звонки · 3478, 5349</span></div>
 <div class="platform-card" style="cursor:default"><span class="platform-icon">📊</span><span class="platform-name">Мониторинг</span><span class="platform-link">Статус · JSON</span></div>
 </div>
 </section>
@@ -222,17 +224,18 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <div class="platform-card" style="cursor:default"><span class="platform-icon">🌐</span><span class="platform-name">Домен</span><span class="platform-link">С A-записями</span></div>
 <div class="platform-card" style="cursor:default"><span class="platform-icon">🔓</span><span class="platform-name">Проброс портов</span><span class="platform-link">На роутере</span></div>
 <div class="platform-card" style="cursor:default"><span class="platform-icon">📧</span><span class="platform-name">Email</span><span class="platform-link">Для уведомлений</span></div>
-<div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 ГБ</span><span class="platform-link">На /volume1</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 ГБ</span><span class="platform-link">На целевом томе</span></div>
 </div>
 </section>
 <section class="card">
 <h2>📂 Структура установки</h2>
-<div class="tree">/volume1/docker/simplex/
+<div class="tree">/volume1/docker/simplex/          # Базовая директория (выбирается при установке)
 ├── .env                          # Пароли и переменные
 ├── docker-compose.yml            # Docker Compose
 ├── CONNECTION_DETAILS.txt        # Данные для клиентов
 ├── simplex-backup.sh             # Скрипт резервного копирования
 ├── status-update.sh              # Скрипт обновления статуса
+├── backups/                      # Резервные копии
 ├── smp/
 │   ├── config/                   # Ключи, сертификаты, fingerprint
 │   ├── certificates/             # TLS сертификаты
@@ -246,8 +249,8 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 └── turn/
     └── logs/
 
-/volume1/docker/simplex/install/www/
-├── index.html                    # Эта страница (инсталлер)
+/volume1/web/simplex/             # Веб-директория (выбирается при установке)
+├── index.html                    # Страница установки клиента
 ├── qrsmp.html                    # Панель управления (защищена)
 ├── status.json                   # Статус контейнеров (обновляется)
 ├── qrcode.min.js                 # Библиотека QR-кодов
@@ -301,7 +304,7 @@ chmod +x install.sh
 /bin/bash /volume1/public/install.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 </section>
 <footer>
-<p>SimpleX Chat Server Installer · Synology DSM 7.1+ · v9.4</p>
+<p>SimpleX Chat Server Installer · Synology DSM 7.1+ · v9.5</p>
 <p style="margin-top:.5rem;font-size:.75rem;">Скрипт: <code>https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh</code></p>
 <p style="margin-top:.25rem;font-size:.75rem;">SimpleX Chat — первый мессенджер без идентификаторов пользователей</p>
 </footer>
@@ -313,7 +316,7 @@ chmod +x install.sh
 <span class="badge">Synology DSM 7.1+</span>
 <h1>SimpleX Chat Server Suite</h1>
 <p class="subtitle">Automatic deployment of SMP, XFTP, TURN on Synology DSM 7.1+.<br>One command — a fully working messenger.</p>
-<div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span></div>
+<div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span><span class="feat">🌐 RU / EN</span></div>
 </header>
 <section class="card">
 <h2>📱 Install SimpleX Chat on your smartphone</h2>
@@ -327,7 +330,7 @@ chmod +x install.sh
 <div class="qr-section">
 <h3>📷 Quick install via QR code</h3>
 <p>Scan the code with your smartphone camera to download:</p>
-<div id="download-qr"></div>
+<div class="qr-wrap download-qr"></div>
 <p style="font-size:.8rem;margin-top:.75rem;">Leads to the official download page simplex.chat</p>
 </div>
 <h3>⚙️ Connect to your server</h3>
@@ -344,7 +347,7 @@ chmod +x install.sh
 <h2>⚠️ Legal information</h2>
 <div class="box warn"><strong>⚠️ Purpose of the script</strong>This script and related materials are intended solely for deploying the SimpleX Chat messenger on the owner's own hardware for personal and family use. The script is not intended for creating public services available to an unlimited circle of persons.</div>
 <div class="box info"><strong>📋 User responsibility</strong><ul>
-<li>Using the script to provide a service to an unlimited circle of persons may entail the obligation to register as an information dissemination organizer (OРИ) in accordance with Art. 10.1 of Federal Law No. 149-FZ.</li>
+<li>Using the script to provide a service to an unlimited circle of persons may entail the obligation to register as an information dissemination organizer (ORI) in accordance with Art. 10.1 of Federal Law No. 149-FZ.</li>
 <li>Processing of users' personal data is regulated by Federal Law No. 152-FZ “On Personal Data”.</li>
 <li>The server owner is solely responsible for compliance with applicable law, security configuration, backup and data protection.</li>
 <li>The author of the script is not liable for any consequences of use, including failures, data loss or claims of third parties.</li>
@@ -390,44 +393,45 @@ dig +short info.smp.your-domain.com</code><button class="copy-btn" onclick="copy
 </table>
 <div class="box note"><strong>💡 Note:</strong> The range <code>49152–65535 UDP</code> is required only for audio and video calls. If calls are not planned, ports 3478 and 5349 are sufficient.</div>
 <h3><span class="step-num">4</span> DSM Firewall configuration</h3>
-<ol><li>Open <strong>Control Panel → Security → Firewall</strong>.</li><li>Click <strong>Edit Rules</strong> in the active profile.</li><li>Add <strong>Allow</strong> rules for each port from the table above.</li><li>Make sure the rule is <strong>above</strong> the “Deny all” rule (if any).</li><li>Click <strong>OK → Apply</strong>.</li></ol>
+<ol><li>Open <strong>Control Panel → Security → Firewall</strong>.</li><li>Click <strong>Edit Rules</strong> in the active profile.</li><li>Add <strong>Allow</strong> rules for each port from the table above.</li><li>Make sure the rule is above the “Deny all” rule (if any).</li><li>Click <strong>OK → Apply</strong>.</li></ol>
 <div class="box warn"><strong>⚠️ Important:</strong> After applying firewall rules, make sure you have not lost access to DSM. Always keep a second browser window with DSM open to roll back changes.</div>
 <h3><span class="step-num">5</span> Run installation</h3>
 <ol>
 <li>Connect via SSH:<pre><code>ssh your_login@NAS_IP</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre></li>
 <li>Get superuser rights:<pre><code>sudo -i</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre></li>
 <li>Run the installation script:<pre><code>curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | /bin/bash</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre></li>
-<li>Answer the script's questions:<ul>
+<li>Answer the script's questions (the first question is language selection):<ul>
 <li><strong>Interface language</strong> — select 1 for Russian or 2 for English.</li>
 <li><strong>Base directory</strong> — select the volume number from the list (default <code>/volume1/docker/simplex</code>).</li>
+<li><strong>Web files directory</strong> — select the volume with the <code>web</code> folder for the control panel files (e.g., <code>/volume1/web/simplex</code>).</li>
 <li><strong>External IP</strong> — the script detects it automatically; confirm or enter manually.</li>
 <li><strong>Domain name</strong> — enter your domain, e.g.: <code>your-domain.com</code>.</li>
 <li><strong>Email</strong> — for admin notifications (press Enter for the default value).</li>
 </ul></li>
-<li>Wait for completion. The script will create directories, certificates, pull images, start containers and generate web pages.</li>
+<li>Wait for completion. The script will create directories, certificates, pull pinned image versions (SMP/XFTP <code>v6.5.2</code>, coturn <code>4.6.3-r0</code>), start containers and generate web pages.</li>
 </ol>
 <h3><span class="step-num">6</span> After installation</h3>
 <h4>6.1 Save connection details</h4>
-<p>The script creates a <code>CONNECTION_DETAILS.txt</code> file with SMP, XFTP, TURN addresses and passwords:</p>
+<p>The script creates a <code>CONNECTION_DETAILS.txt</code> file with SMP, XFTP, TURN addresses and passwords (the path depends on the selected volume):</p>
 <pre><code>cat /volume1/docker/simplex/CONNECTION_DETAILS.txt</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
 <div class="box warn"><strong>⚠️ Do not share this file with anyone!</strong> It contains all the secrets of your server.</div>
 <h4>6.2 Web Station configuration</h4>
 <ol><li>Open <strong>DSM → Web Station → Web Service Portal</strong>.</li><li>Click <strong>Create</strong>.</li>
 <li>Fill in the parameters:<ul>
 <li><strong>Description:</strong> <code>SimpleX Control Panel</code></li>
-<li><strong>Root folder:</strong> <code>/volume1/docker/simplex/install/www</code></li>
+<li><strong>Root folder:</strong> <code>/volume1/web/simplex</code> (the volume you selected during installation in step 5)</li>
 <li><strong>Web server:</strong> <code>Apache HTTP Server 2.4</code></li>
 <li><strong>PHP:</strong> <code>None</code> (not required)</li>
 </ul></li>
 <li>In the <strong>URL</strong> section specify: <code>info.smp.your_domain.com</code></li>
 <li>Click <strong>OK</strong>.</li></ol>
-<div class="box info"><strong>📋 Final Web Station configuration:</strong><br>Root folder: <code>/volume1/docker/simplex/install/www</code><br>Web server: <code>Apache HTTP Server 2.4</code><br>URL: <code>info.smp.your_domain.com</code></div>
+<div class="box info"><strong>📋 Final Web Station configuration:</strong><br>Root folder: <code>/volume1/web/simplex</code><br>Web server: <code>Apache HTTP Server 2.4</code><br>URL: <code>info.smp.your_domain.com</code></div>
 <h4>6.3 Web panel password</h4>
 <p>During installation the script prints the login and password for <code>qrsmp.html</code>. <strong>The password is shown only once.</strong> If you did not save it, reset it:</p>
 <pre><code># Generate a new password
 NEW_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
 HASH=$(openssl passwd -apr1 "$NEW_PASS")
-printf 'admin:%s\n' "$HASH" > /volume1/docker/simplex/install/www/.htpasswd
+printf 'admin:%s\n' "$HASH" > /volume1/web/simplex/.htpasswd
 echo "New password: admin / $NEW_PASS"</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
 <h4>6.4 Verify operation</h4>
 <ol><li>Open the control panel: <code>https://info.smp.your_domain.com/qrsmp.html</code></li>
@@ -445,9 +449,9 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <section class="card">
 <h2>📦 What gets installed</h2>
 <div class="platform-grid">
-<div class="platform-card" style="cursor:default"><span class="platform-icon">💬</span><span class="platform-name">SMP Server</span><span class="platform-link">Messages · 5223/5224</span></div>
-<div class="platform-card" style="cursor:default"><span class="platform-icon">📁</span><span class="platform-name">XFTP Server</span><span class="platform-link">Files · 7788</span></div>
-<div class="platform-card" style="cursor:default"><span class="platform-icon">📞</span><span class="platform-name">TURN / STUN</span><span class="platform-link">Calls · 3478, 5349</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">💬</span><span class="platform-name">SMP Server v6.5.2</span><span class="platform-link">Messages · 5223/5224</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📁</span><span class="platform-name">XFTP Server v6.5.2</span><span class="platform-link">Files · 7788</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">📞</span><span class="platform-name">coturn 4.6.3-r0</span><span class="platform-link">Calls · 3478, 5349</span></div>
 <div class="platform-card" style="cursor:default"><span class="platform-icon">📊</span><span class="platform-name">Monitoring</span><span class="platform-link">Status · JSON</span></div>
 </div>
 </section>
@@ -457,17 +461,18 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <div class="platform-card" style="cursor:default"><span class="platform-icon">🌐</span><span class="platform-name">Domain</span><span class="platform-link">With A records</span></div>
 <div class="platform-card" style="cursor:default"><span class="platform-icon">🔓</span><span class="platform-name">Port forwarding</span><span class="platform-link">On the router</span></div>
 <div class="platform-card" style="cursor:default"><span class="platform-icon">📧</span><span class="platform-name">Email</span><span class="platform-link">For notifications</span></div>
-<div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 GB</span><span class="platform-link">On /volume1</span></div>
+<div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 GB</span><span class="platform-link">On the target volume</span></div>
 </div>
 </section>
 <section class="card">
 <h2>📂 Installation structure</h2>
-<div class="tree">/volume1/docker/simplex/
+<div class="tree">/volume1/docker/simplex/          # Base directory (selected during installation)
 ├── .env                          # Passwords and variables
 ├── docker-compose.yml            # Docker Compose
 ├── CONNECTION_DETAILS.txt        # Client connection details
 ├── simplex-backup.sh             # Backup script
 ├── status-update.sh              # Status update script
+├── backups/                      # Backup archives
 ├── smp/
 │   ├── config/                   # Keys, certificates, fingerprint
 │   ├── certificates/             # TLS certificates
@@ -481,8 +486,8 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 └── turn/
     └── logs/
 
-/volume1/docker/simplex/install/www/
-├── index.html                    # This page (installer)
+/volume1/web/simplex/             # Web directory (selected during installation)
+├── index.html                    # Client installation page
 ├── qrsmp.html                    # Control panel (protected)
 ├── status.json                   # Container status (updated)
 ├── qrcode.min.js                 # QR code library
@@ -536,7 +541,7 @@ chmod +x install.sh
 /bin/bash /volume1/public/install.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
 </section>
 <footer>
-<p>SimpleX Chat Server Installer · Synology DSM 7.1+ · v9.4</p>
+<p>SimpleX Chat Server Installer · Synology DSM 7.1+ · v9.5</p>
 <p style="margin-top:.5rem;font-size:.75rem;">Script: <code>https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh</code></p>
 <p style="margin-top:.25rem;font-size:.75rem;">SimpleX Chat — the first messenger without user identifiers</p>
 </footer>
@@ -546,12 +551,9 @@ chmod +x install.sh
 
 <script src="qrcode.min.js"></script>
 <script>
-// Генерация QR-кодов для обеих языковых копий / QR generation for both language copies
-var qrBlocks=document.querySelectorAll('#download-qr, .only-en #download-qr');
-document.querySelectorAll('[id="download-qr"]').forEach(function(el){
+document.querySelectorAll('.download-qr').forEach(function(el){
   new QRCode(el,{text:'https://simplex.chat',width:200,height:200,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
 });
-// Переключатель языка / Language switcher
 function setLang(l){
   document.documentElement.setAttribute('data-lang',l);
   document.documentElement.lang=l;
@@ -559,9 +561,7 @@ function setLang(l){
   document.getElementById('btn-ru').classList.toggle('active',l==='ru');
   document.getElementById('btn-en').classList.toggle('active',l==='en');
 }
-var savedLang=localStorage.getItem('simplex-lang')||'ru';
-setLang(savedLang);
-// Переключатель темы / Theme switcher
+setLang(localStorage.getItem('simplex-lang')||'ru');
 function toggleTheme(){
   const current=document.documentElement.getAttribute('data-theme');
   const next=current==='dark'?'light':'dark';
@@ -570,27 +570,25 @@ function toggleTheme(){
   updateIcon(next);
 }
 function updateIcon(theme){
-  const icon=document.getElementById('theme-icon');
-  if(theme==='dark'){
-    icon.innerHTML='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-  }else{
-    icon.innerHTML='<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
-  }
+  document.getElementById('ico-sun').style.display=(theme==='dark')?'none':'block';
+  document.getElementById('ico-moon').style.display=(theme==='dark')?'block':'none';
 }
+const savedTheme=localStorage.getItem('simplex-theme')||'dark';
+document.documentElement.setAttribute('data-theme',savedTheme);
+updateIcon(savedTheme);
 function copyCmd(btn){
   const code=btn.parentElement.querySelector('code').textContent;
+  const orig=btn.textContent;
+  const done=function(){btn.textContent='✅';setTimeout(function(){btn.textContent=orig},2000)};
   if(navigator.clipboard&&window.isSecureContext){
-    navigator.clipboard.writeText(code).then(()=>{btn.textContent='✅';setTimeout(()=>btn.textContent='📋',2000)});
+    navigator.clipboard.writeText(code).then(done);
   }else{
     const ta=document.createElement('textarea');ta.value=code;ta.style.cssText='position:fixed;opacity:0';
     document.body.appendChild(ta);ta.select();
-    try{document.execCommand('copy');btn.textContent='✅';setTimeout(()=>btn.textContent='📋',2000)}catch(e){}
+    try{document.execCommand('copy');done()}catch(e){}
     ta.remove();
   }
 }
-const saved=localStorage.getItem('simplex-theme')||'dark';
-document.documentElement.setAttribute('data-theme',saved);
-updateIcon(saved);
 </script>
 </body>
 </html>
