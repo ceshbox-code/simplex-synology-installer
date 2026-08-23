@@ -81,6 +81,43 @@ footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;
 <p class="subtitle">Автоматическое развёртывание SMP, XFTP, TURN на Synology DSM 7.1+.<br>Одна команда — полностью рабочий мессенджер.</p>
 <div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span><span class="feat">🌐 RU / EN</span></div>
 </header>
+
+<section class="card">
+<h2>🚀 Генератор команды установки</h2>
+<p>Заполните поля, чтобы получить готовую команду для SSH. Переменные окружения позволят пропустить часть вопросов при установке.</p>
+<div style="display:flex;flex-direction:column;gap:12px;margin:1rem 0">
+  <div>
+    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">🌐 Доменное имя *</label>
+    <input type="text" id="gen-domain-ru" placeholder="example.ru" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
+  </div>
+  <div>
+    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">📡 Внешний IP-адрес</label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="gen-ip-ru" placeholder="92.43.187.36" style="flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
+      <button onclick="detectIP('ru')" style="padding:10px 16px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap">Авто</button>
+    </div>
+  </div>
+  <div>
+    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">📧 Email администратора</label>
+    <input type="email" id="gen-email-ru" placeholder="admin@example.ru" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
+  </div>
+  <div>
+    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">🌍 Язык установщика</label>
+    <select id="gen-lang-ru" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
+      <option value="1">Русский</option>
+      <option value="2">English</option>
+    </select>
+  </div>
+</div>
+<button onclick="generateCmd('ru')" style="width:100%;padding:14px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer">⚡ Сгенерировать команду</button>
+<div id="gen-result-ru" style="display:none;margin-top:1.25rem">
+  <h3>Готовая команда</h3>
+  <p style="font-size:.85rem;margin-bottom:.5rem">Скопируйте и вставьте в SSH-терминал NAS (от имени root):</p>
+  <pre style="position:relative;background:var(--info-bg);border:1px solid var(--line);border-radius:10px;padding:1rem"><code id="gen-cmd-ru" style="display:block;white-space:pre-wrap;word-break:break-all;font-size:.8rem;color:var(--text)"></code><button onclick="copyGen('ru')" style="position:absolute;top:.5rem;right:.5rem;background:var(--purple);color:#fff;border:none;border-radius:6px;padding:.4rem .8rem;font-size:.75rem;font-weight:600;cursor:pointer">📋 Копировать</button></pre>
+  <div class="box note"><strong>💡 Примечание</strong>Скрипт всё равно запросит выбор тома для данных серверов и веб-файлов, так как это зависит от конфигурации вашего NAS.</div>
+</div>
+</section>
+
 <section class="card">
 <h2>📱 Установка SimpleX Chat на смартфон</h2>
 <p>Для работы с вашим приватным сервером необходимо установить клиентское приложение SimpleX Chat. Выберите платформу вашего устройства:</p>
@@ -166,7 +203,7 @@ dig +short info.smp.ваш-домен.ru</code><button class="copy-btn" onclick=
 <li>Ответьте на вопросы скрипта (первый вопрос — выбор языка):<ul>
 <li><strong>Язык интерфейса</strong> — выберите 1 для русского или 2 для английского.</li>
 <li><strong>Базовая директория</strong> — выберите номер тома из предложенного списка (по умолчанию <code>/volume1/docker/simplex</code>).</li>
-<li><strong>Каталог веб-файлов</strong> — выберите том с папкой <code>web</code> для файлов панели управления (например, <code>/volume1/web/simplex</code>).</li>
+<li><strong>Каталог веб-файлов</strong> — выберите том с папкой <code>web</code> для панели управления (например, <code>/volume1/web/simplex</code>).</li>
 <li><strong>Внешний IP</strong> — скрипт определит автоматически, подтвердите или введите вручную.</li>
 <li><strong>Доменное имя</strong> — введите ваш домен, например: <code>ваш-домен.ru</code>.</li>
 <li><strong>Email</strong> — для уведомлений администратора (можно нажать Enter для значения по умолчанию).</li>
@@ -318,6 +355,43 @@ chmod +x install.sh
 <p class="subtitle">Automatic deployment of SMP, XFTP, TURN on Synology DSM 7.1+.<br>One command — a fully working messenger.</p>
 <div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span><span class="feat">🌐 RU / EN</span></div>
 </header>
+
+<section class="card">
+<h2>🚀 Installation command generator</h2>
+<p>Fill in the fields below to get a ready-to-use SSH command. Environment variables will let you skip some questions during installation.</p>
+<div style="display:flex;flex-direction:column;gap:12px;margin:1rem 0">
+  <div>
+    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">🌐 Domain name *</label>
+    <input type="text" id="gen-domain-en" placeholder="example.com" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
+  </div>
+  <div>
+    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">📡 External IP address</label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="gen-ip-en" placeholder="92.43.187.36" style="flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
+      <button onclick="detectIP('en')" style="padding:10px 16px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap">Auto</button>
+    </div>
+  </div>
+  <div>
+    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">📧 Admin email</label>
+    <input type="email" id="gen-email-en" placeholder="admin@example.com" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
+  </div>
+  <div>
+    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">🌍 Installer language</label>
+    <select id="gen-lang-en" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
+      <option value="1">Russian</option>
+      <option value="2">English</option>
+    </select>
+  </div>
+</div>
+<button onclick="generateCmd('en')" style="width:100%;padding:14px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer">⚡ Generate command</button>
+<div id="gen-result-en" style="display:none;margin-top:1.25rem">
+  <h3>Ready command</h3>
+  <p style="font-size:.85rem;margin-bottom:.5rem">Copy and paste into your NAS SSH terminal (as root):</p>
+  <pre style="position:relative;background:var(--info-bg);border:1px solid var(--line);border-radius:10px;padding:1rem"><code id="gen-cmd-en" style="display:block;white-space:pre-wrap;word-break:break-all;font-size:.8rem;color:var(--text)"></code><button onclick="copyGen('en')" style="position:absolute;top:.5rem;right:.5rem;background:var(--purple);color:#fff;border:none;border-radius:6px;padding:.4rem .8rem;font-size:.75rem;font-weight:600;cursor:pointer">📋 Copy</button></pre>
+  <div class="box note"><strong>💡 Note</strong>The script will still ask for the volume selection for server data and web files, as this depends on your NAS configuration.</div>
+</div>
+</section>
+
 <section class="card">
 <h2>📱 Install SimpleX Chat on your smartphone</h2>
 <p>To use your private server, install the SimpleX Chat client app. Choose your device platform:</p>
@@ -403,7 +477,7 @@ dig +short info.smp.your-domain.com</code><button class="copy-btn" onclick="copy
 <li>Answer the script's questions (the first question is language selection):<ul>
 <li><strong>Interface language</strong> — select 1 for Russian or 2 for English.</li>
 <li><strong>Base directory</strong> — select the volume number from the list (default <code>/volume1/docker/simplex</code>).</li>
-<li><strong>Web files directory</strong> — select the volume with the <code>web</code> folder for the control panel files (e.g., <code>/volume1/web/simplex</code>).</li>
+<li><strong>Web files directory</strong> — select the volume with the <code>web</code> folder for the control panel (e.g., <code>/volume1/web/simplex</code>).</li>
 <li><strong>External IP</strong> — the script detects it automatically; confirm or enter manually.</li>
 <li><strong>Domain name</strong> — enter your domain, e.g.: <code>your-domain.com</code>.</li>
 <li><strong>Email</strong> — for admin notifications (press Enter for the default value).</li>
@@ -590,5 +664,43 @@ function copyCmd(btn){
   }
 }
 </script>
+
+<script>
+function detectIP(lang){
+  var suf=(lang==='en')?'-en':'-ru';
+  fetch('https://api.ipify.org?format=json').then(function(r){return r.json();}).then(function(d){document.getElementById('gen-ip'+suf).value=d.ip;}).catch(function(){alert((lang==='en')?'Could not detect IP. Enter manually.':'Не удалось определить IP. Введите вручную.');});
+}
+function shellQuote(s){
+  if(/^[A-Za-z0-9._@:\/=-]+$/.test(s))return s;
+  return "'"+s.replace(/'/g,"'\\''")+"'";
+}
+function generateCmd(lang){
+  var suf=(lang==='en')?'-en':'-ru';
+  var domain=document.getElementById('gen-domain'+suf).value.trim();
+  var ip=document.getElementById('gen-ip'+suf).value.trim();
+  var email=document.getElementById('gen-email'+suf).value.trim();
+  var lng=document.getElementById('gen-lang'+suf).value;
+  if(!domain){alert((lang==='en')?'Domain is required':'Укажите доменное имя');return;}
+  if(domain.indexOf('.')===-1){alert((lang==='en')?'Domain must contain a dot':'Домен должен содержать точку');return;}
+  var parts=[];
+  parts.push('MAIN_DOMAIN_OVERRIDE='+shellQuote(domain));
+  if(ip)parts.push('EXTERNAL_IP_OVERRIDE='+shellQuote(ip));
+  if(email)parts.push('ADMIN_EMAIL_OVERRIDE='+shellQuote(email));
+  parts.push('LANG_CHOICE='+lng);
+  var cmd='curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | '+parts.join(' ')+' /bin/bash';
+  document.getElementById('gen-cmd'+suf).textContent=cmd;
+  document.getElementById('gen-result'+suf).style.display='block';
+}
+function copyGen(lang){
+  var suf=(lang==='en')?'-en':'-ru';
+  var txt=document.getElementById('gen-cmd'+suf).textContent;
+  var btn=event.target;
+  var orig=btn.textContent;
+  function done(){btn.textContent='✅';setTimeout(function(){btn.textContent=orig;},2000);}
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(done);}
+  else{var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){}ta.remove();}
+}
+</script>
+
 </body>
 </html>

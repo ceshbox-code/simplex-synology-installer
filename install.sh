@@ -13,12 +13,16 @@ echo "=========================================="
 echo "  SIMPLEX CHAT INSTALLER v9.5 — SYNOLOGY"
 echo "=========================================="
 echo ""
+if [ -n "${LANG_CHOICE:-}" ] && [[ "${LANG_CHOICE}" =~ ^[12]$ ]]; then
+    echo "[INFO] Язык задан через окружение / Language set via environment: $LANG_CHOICE"
+else
 echo "Выберите язык / Select language:"
 echo "  1) Русский"
 echo "  2) English"
 echo ""
 read -p "Ваш выбор / Your choice [1]: " LANG_CHOICE < /dev/tty
 LANG_CHOICE=${LANG_CHOICE:-1}
+fi
 if [ "$LANG_CHOICE" = "2" ]; then
     LANG_EN=true
 else
@@ -132,11 +136,20 @@ info "Веб-директория: $WEB_DIR" "Web directory: $WEB_DIR"
 INTERNAL_IP=$(ip route get 1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
 EXTERNAL_IP=$(curl -fsSL --max-time 5 https://ifconfig.me 2>/dev/null || echo "")
 
+if [ -n "${EXTERNAL_IP_OVERRIDE:-}" ]; then
+    EXTERNAL_IP="$EXTERNAL_IP_OVERRIDE"
+    echo "[INFO] Внешний IP задан через окружение / External IP set via environment: $EXTERNAL_IP"
+else
 read -p "Введите внешний IP-адрес / Enter external IP [$EXTERNAL_IP]: " INPUT_EXT_IP < /dev/tty
 EXTERNAL_IP=${INPUT_EXT_IP:-$EXTERNAL_IP}
+fi
 [ -z "$EXTERNAL_IP" ] && error "Не удалось определить внешний IP." "Failed to determine external IP."
 [ -z "$INTERNAL_IP" ] && error "Не удалось определить внутренний IP NAS." "Failed to determine internal NAS IP."
 
+if [ -n "${MAIN_DOMAIN_OVERRIDE:-}" ]; then
+    MAIN_DOMAIN="$MAIN_DOMAIN_OVERRIDE"
+    echo "[INFO] Домен задан через окружение / Domain set via environment: $MAIN_DOMAIN"
+else
 while true; do
     read -p "Введите доменное имя / Enter domain name (e.g., your-domain.com): " MAIN_DOMAIN < /dev/tty
     if [ -z "$MAIN_DOMAIN" ]; then warn "Домен не может быть пустым." "Domain cannot be empty."; continue; fi
@@ -144,9 +157,15 @@ while true; do
     if [ -z "$DOTS" ]; then warn "Домен должен содержать точку." "Domain must contain a dot."; continue; fi
     break
 done
+fi
 
+if [ -n "${ADMIN_EMAIL_OVERRIDE:-}" ]; then
+    ADMIN_EMAIL="$ADMIN_EMAIL_OVERRIDE"
+    echo "[INFO] Email задан через окружение / Email set via environment: $ADMIN_EMAIL"
+else
 read -p "Email администратора / Admin email [admin@$MAIN_DOMAIN]: " ADMIN_EMAIL < /dev/tty
 ADMIN_EMAIL=${ADMIN_EMAIL:-"admin@$MAIN_DOMAIN"}
+fi
 
 SMP_DOMAIN="smp.$MAIN_DOMAIN"
 XFTP_DOMAIN="files.$MAIN_DOMAIN"
