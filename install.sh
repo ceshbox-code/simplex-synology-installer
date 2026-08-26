@@ -1,46 +1,138 @@
 #!/bin/bash
 # ==============================================================================
 # SimpleX Chat Server Suite Installer for Synology DSM 7.1+
-# Версия: 9.5 (исправлена кодировка, выбор языка, пути, версии образов)
+# Версия: 9.6
 # ==============================================================================
-set -e
+set -euo pipefail
 
+# === КОНФИГУРАЦИЯ ВЕРСИЙ ===
+SMP_IMAGE="simplexchat/smp-server:v6.5.2"
+XFTP_IMAGE="simplexchat/xftp-server:v6.5.2"
+TURN_IMAGE="coturn/coturn:4.6.3-r0"
+INSTALLER_VERSION="9.6"
+
+# === ЦВЕТА ===
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 
-# === ВЫБОР ЯЗЫКА / LANGUAGE SELECTION ===
 echo ""
 echo "=========================================="
-echo "  SIMPLEX CHAT INSTALLER v9.5 — SYNOLOGY"
+echo "  SIMPLEX CHAT INSTALLER v${INSTALLER_VERSION} — SYNOLOGY"
 echo "=========================================="
 echo ""
+
+# === ФУНКЦИЯ БЕЗОПАСНОГО ЧТЕНИЯ ===
+safe_read() {
+    local prompt="$1"
+    local default="${2:-}"
+    local var_name="$3"
+    local value=""
+    if [ -c /dev/tty ]; then
+        printf '%s' "$prompt" > /dev/tty
+        read -r value < /dev/tty 2>/dev/null || true
+    fi
+    if [ -z "$value" ] && [ -n "$default" ]; then
+        value="$default"
+    fi
+    eval "$var_name=\"\$value\""
+}
+
+# === ВЫБОР ЯЗЫКА ===
 if [ -n "${LANG_CHOICE:-}" ] && [[ "${LANG_CHOICE}" =~ ^[12]$ ]]; then
     echo "[INFO] Язык задан через окружение / Language set via environment: $LANG_CHOICE"
 else
-echo "Выберите язык / Select language:"
-echo "  1) Русский"
-echo "  2) English"
-echo ""
-read -p "Ваш выбор / Your choice [1]: " LANG_CHOICE < /dev/tty
-LANG_CHOICE=${LANG_CHOICE:-1}
+    echo "Выберите язык / Select language:"
+    echo "  1) Русский"
+    echo "  2) English"
+    echo ""
+    safe_read "Ваш выбор / Your choice [1]: " "1" LANG_CHOICE
 fi
+
 if [ "$LANG_CHOICE" = "2" ]; then
     LANG_EN=true
 else
     LANG_EN=false
 fi
 
-# Функции вывода с поддержкой двух языков
-# Использование: info "Русский текст" "English text"
+# === ФУНКЦИИ ВЫВОДА ===
 info()    { if [ "$LANG_EN" = true ]; then echo -e "${BLUE}[INFO]${NC} $2"; else echo -e "${BLUE}[INFO]${NC} $1"; fi; }
 success() { if [ "$LANG_EN" = true ]; then echo -e "${GREEN}[ OK ]${NC} $2"; else echo -e "${GREEN}[ OK ]${NC} $1"; fi; }
 warn()    { if [ "$LANG_EN" = true ]; then echo -e "${YELLOW}[WARN]${NC} $2"; else echo -e "${YELLOW}[WARN]${NC} $1"; fi; }
 error()   { if [ "$LANG_EN" = true ]; then echo -e "${RED}[ERR ]${NC} $2"; exit 1; else echo -e "${RED}[ERR ]${NC} $1"; exit 1; fi; }
 
-# Проверки зависимостей
+# ==============================================================================
+# 0.0 ПОИСК СОХРАНЁННОЙ КОНФИГУРАЦИИ (ПЕРЕУСТАНОВКА)
+# ==============================================================================
+REINSTALL_MODE=false
+FOUND_ENV_PATHS=()
+for v in /volume*; do
+    if [ -f "$v/docker/simplex/.env" ]; then
+        FOUND_ENV_PATHS+=("$v/docker/simplex")
+    fi
+done
+
+if [ ${#FOUND_ENV_PATHS[@]} -gt 0 ]; then
+    echo ""
+    warn "На сервере есть сохранённая конфигурация:" \
+         "A saved configuration was found on this server:"
+    for p in "${FOUND_ENV_PATHS[@]}"; do
+        echo "  - $p/.env"
+    done
+    echo ""
+    if [ "$LANG_EN" = true ]; then
+        echo "  1) Use saved configuration (reinstall)"
+        echo "  2) Enter new configuration"
+    else
+        echo "  1) Использовать сохранённую конфигурацию (переустановка)"
+        echo "  2) Ввести новую конфигурацию"
+    fi
+    echo ""
+    safe_read "Ваш выбор / Your choice [1]: " "1" REINSTALL_CHOICE
+
+    if [ "$REINSTALL_CHOICE" != "2" ]; then
+        REINSTALL_MODE=true
+        if [ ${#FOUND_ENV_PATHS[@]} -eq 1 ]; then
+            BASE_DIR="${FOUND_ENV_PATHS[0]}"
+        else
+            echo ""
+            info "Найдено несколько сохранённых конфигураций:" \
+                 "Multiple saved configurations found:"
+            ridx=1
+            for p in "${FOUND_ENV_PATHS[@]}"; do
+                echo "  $ridx) $p"
+                ridx=$((ridx + 1))
+            done
+            echo ""
+            while true; do
+                safe_read "Выберите номер конфигурации / Select configuration number [1]: " "1" RCHOICE
+                if [[ "$RCHOICE" =~ ^[0-9]+$ ]] && [ "$RCHOICE" -ge 1 ] && [ "$RCHOICE" -le ${#FOUND_ENV_PATHS[@]} ]; then
+                    BASE_DIR="${FOUND_ENV_PATHS[$((RCHOICE - 1))]}"
+                    break
+                else
+                    warn "Некорректный выбор." "Invalid choice."
+                fi
+            done
+        fi
+
+        info "Используется сохранённая конфигурация: $BASE_DIR/.env" \
+             "Using saved configuration: $BASE_DIR/.env"
+        # shellcheck disable=SC1090
+        source "$BASE_DIR/.env"
+        [ -z "${WEB_DIR:-}" ] && WEB_DIR="/volume1/web/simplex"
+        [ -z "${TURN_USER:-}" ] && TURN_USER="simplex"
+        success "Конфигурация загружена из $BASE_DIR/.env" \
+                "Configuration loaded from $BASE_DIR/.env"
+    else
+        info "Будет введена новая конфигурация." \
+             "A new configuration will be entered."
+    fi
+fi
+
+# === ПРОВЕРКИ ЗАВИСИМОСТЕЙ ===
 if [ "$(id -u)" -ne 0 ]; then
     error "Скрипт требует прав суперпользователя. Выполните: sudo /bin/bash $0" \
           "Script requires superuser privileges. Run: sudo /bin/bash $0"
 fi
+
 command -v openssl &>/dev/null || error "openssl не найден." "openssl not found."
 command -v curl    &>/dev/null || error "curl не найден." "curl not found."
 command -v docker  &>/dev/null || error "Docker не установлен. Установите через Package Center." "Docker not installed. Install via Package Center."
@@ -54,10 +146,11 @@ fi
 
 echo ""
 
+if [ "$REINSTALL_MODE" = false ]; then
+
 # ==============================================================================
-# 1. СБОР ДАННЫХ + АВТООПРЕДЕЛЕНИЕ ТОМА
+# 0. ВЫБОР ТОМА
 # ==============================================================================
-DEFAULT_BASE="/volume1/docker/simplex"
 OPTIONS=()
 PATHS=()
 idx=1
@@ -80,8 +173,7 @@ for opt in "${OPTIONS[@]}"; do echo "  $opt"; done
 echo ""
 
 while true; do
-    read -p "Выберите номер варианта / Select option [1]: " CHOICE < /dev/tty
-    CHOICE=${CHOICE:-1}
+    safe_read "Выберите номер варианта / Select option [1]: " "1" CHOICE
     if [[ "$CHOICE" =~ ^[0-9]+$ ]] && [ "$CHOICE" -ge 1 ] && [ "$CHOICE" -le ${#PATHS[@]} ]; then
         BASE_DIR="${PATHS[$((CHOICE - 1))]}"
         break
@@ -91,10 +183,42 @@ while true; do
     fi
 done
 
-# === ВЫБОР ТОМА ДЛЯ ВЕБ-ФАЙЛОВ (Web Station) ===
+# === ЗАГРУЗКА СУЩЕСТВУЮЩЕЙ КОНФИГУРАЦИИ ===
+EXISTING_ENV=false
+if [ -f "$BASE_DIR/.env" ]; then
+    info "Обнаружен существующий .env — загружаю конфигурацию..." \
+         "Existing .env found — loading configuration..."
+    # shellcheck disable=SC1090
+    source "$BASE_DIR/.env"
+    EXISTING_ENV=true
+fi
+
+# ==============================================================================
+# 1. СБОР ДАННЫХ
+# ==============================================================================
+
+# ВАЖНО:
+# На этом этапе .env НЕ загружается как рабочая конфигурация.
+# Все обязательные параметры пользователь вводит/подтверждает вручную.
+# .env будет прочитан ниже только для сохранения секретов.
+
+OLD_ENV_FILE="$BASE_DIR/.env"
+EXISTING_ENV=false
+
+if [ -f "$OLD_ENV_FILE" ]; then
+    EXISTING_ENV=true
+    info "Обнаружен существующий .env. Его параметры будут использованы только для сохранения секретов." \
+         "Existing .env found. Its parameters will only be used to preserve secrets."
+fi
+
+# ==============================================================================
+# 1.1 WEB DIRECTORY
+# ==============================================================================
+
 WEB_VOLUMES=()
 WEB_PATHS=()
 widx=1
+
 for v in /volume*; do
     if [ -d "$v/web" ]; then
         WEB_VOLUMES+=("$widx) $v/web/simplex")
@@ -105,20 +229,35 @@ done
 
 if [ ${#WEB_PATHS[@]} -eq 0 ]; then
     warn "Папка /web не найдена ни на одном томе. Используется /volume1/web/simplex" \
-         "Folder /web not found on any volume. Using /volume1/web/simplex"
+         "No /web directory found on any volume. Using /volume1/web/simplex"
     WEB_DIR="/volume1/web/simplex"
+
 elif [ ${#WEB_PATHS[@]} -eq 1 ]; then
     WEB_DIR="${WEB_PATHS[0]}"
-    info "Веб-файлы будут размещены в: $WEB_DIR" "Web files will be placed in: $WEB_DIR"
+    info "Веб-файлы будут размещены в: $WEB_DIR" \
+         "Web files will be placed in: $WEB_DIR"
+
 else
     echo ""
-    info "Доступные варианты для веб-файлов (Web Station):" "Available options for web files (Web Station):"
-    for opt in "${WEB_VOLUMES[@]}"; do echo "  $opt"; done
+    info "Доступные варианты для веб-файлов (Web Station):" \
+         "Available options for web files (Web Station):"
+
+    for opt in "${WEB_VOLUMES[@]}"; do
+        echo "  $opt"
+    done
+
     echo ""
+
     while true; do
-        read -p "Выберите номер варианта для веб-файлов / Select option for web files [1]: " WEB_CHOICE < /dev/tty
-        WEB_CHOICE=${WEB_CHOICE:-1}
-        if [[ "$WEB_CHOICE" =~ ^[0-9]+$ ]] && [ "$WEB_CHOICE" -ge 1 ] && [ "$WEB_CHOICE" -le ${#WEB_PATHS[@]} ]; then
+        safe_read \
+            "Выберите номер варианта для веб-файлов / Select option for web files [1]: " \
+            "1" \
+            WEB_CHOICE
+
+        if [[ "$WEB_CHOICE" =~ ^[0-9]+$ ]] &&
+           [ "$WEB_CHOICE" -ge 1 ] &&
+           [ "$WEB_CHOICE" -le ${#WEB_PATHS[@]} ]; then
+
             WEB_DIR="${WEB_PATHS[$((WEB_CHOICE - 1))]}"
             break
         else
@@ -130,63 +269,245 @@ fi
 
 mkdir -p "$WEB_DIR"
 
-info "Базовая директория: $BASE_DIR" "Base directory: $BASE_DIR"
-info "Веб-директория: $WEB_DIR" "Web directory: $WEB_DIR"
+info "Базовая директория: $BASE_DIR" \
+     "Base directory: $BASE_DIR"
 
-INTERNAL_IP=$(ip route get 1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
-EXTERNAL_IP=$(curl -fsSL --max-time 5 https://ifconfig.me 2>/dev/null || echo "")
+info "Веб-директория: $WEB_DIR" \
+     "Web directory: $WEB_DIR"
 
-if [ -n "${EXTERNAL_IP_OVERRIDE:-}" ]; then
-    EXTERNAL_IP="$EXTERNAL_IP_OVERRIDE"
-    echo "[INFO] Внешний IP задан через окружение / External IP set via environment: $EXTERNAL_IP"
-else
-read -p "Введите внешний IP-адрес / Enter external IP [$EXTERNAL_IP]: " INPUT_EXT_IP < /dev/tty
-EXTERNAL_IP=${INPUT_EXT_IP:-$EXTERNAL_IP}
+# ==============================================================================
+# 1.2 INTERNAL IP
+# ==============================================================================
+
+AUTO_INTERNAL_IP=$(
+    ip route get 1 2>/dev/null |
+    awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}'
+)
+
+if [ -z "$AUTO_INTERNAL_IP" ]; then
+    AUTO_INTERNAL_IP=$(
+        ip -4 route get 1 2>/dev/null |
+        awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}'
+    )
 fi
-[ -z "$EXTERNAL_IP" ] && error "Не удалось определить внешний IP." "Failed to determine external IP."
-[ -z "$INTERNAL_IP" ] && error "Не удалось определить внутренний IP NAS." "Failed to determine internal NAS IP."
 
-if [ -n "${MAIN_DOMAIN_OVERRIDE:-}" ]; then
-    MAIN_DOMAIN="$MAIN_DOMAIN_OVERRIDE"
-    echo "[INFO] Домен задан через окружение / Domain set via environment: $MAIN_DOMAIN"
+if [ -z "$AUTO_INTERNAL_IP" ]; then
+    error "Не удалось автоматически определить внутренний IP NAS." \
+          "Failed to automatically determine the NAS internal IP."
+fi
+
+echo ""
+info "Автоматически определён внутренний IP NAS: $AUTO_INTERNAL_IP" \
+     "Automatically detected NAS internal IP: $AUTO_INTERNAL_IP"
+if [ "$LANG_EN" = true ]; then
+    echo "  1) Use detected IP ($AUTO_INTERNAL_IP)"
+    echo "  2) Enter my own IP"
 else
+    echo "  1) Использовать определённый IP ($AUTO_INTERNAL_IP)"
+    echo "  2) Ввести свой IP"
+fi
+safe_read "Ваш выбор / Your choice [1]: " "1" INTERNAL_IP_CHOICE
+
+if [ "$INTERNAL_IP_CHOICE" = "2" ]; then
+    safe_read \
+        "Введите внутренний IP NAS / Enter NAS internal IP: " \
+        "" \
+        INTERNAL_IP
+else
+    INTERNAL_IP="$AUTO_INTERNAL_IP"
+fi
+
+if [ -z "$INTERNAL_IP" ]; then
+    error "Внутренний IP NAS не может быть пустым." \
+          "NAS internal IP cannot be empty."
+fi
+
+info "Используется внутренний IP NAS: $INTERNAL_IP" \
+     "NAS internal IP in use: $INTERNAL_IP"
+
+# ==============================================================================
+# 1.3 EXTERNAL IP
+# ==============================================================================
+
+AUTO_EXTERNAL_IP=$(
+    curl -fsSL --max-time 5 https://ifconfig.me 2>/dev/null || echo ""
+)
+
+if [ -n "$AUTO_EXTERNAL_IP" ]; then
+    info "Автоматически определён внешний IP: $AUTO_EXTERNAL_IP" \
+         "Automatically detected external IP: $AUTO_EXTERNAL_IP"
+    if [ "$LANG_EN" = true ]; then
+        echo "  1) Use detected IP ($AUTO_EXTERNAL_IP)"
+        echo "  2) Enter my own IP"
+    else
+        echo "  1) Использовать определённый IP ($AUTO_EXTERNAL_IP)"
+        echo "  2) Ввести свой IP"
+    fi
+    safe_read "Ваш выбор / Your choice [1]: " "1" EXTERNAL_IP_CHOICE
+
+    if [ "$EXTERNAL_IP_CHOICE" = "2" ]; then
+        safe_read \
+            "Введите внешний IP-адрес / Enter external IP: " \
+            "" \
+            EXTERNAL_IP
+    else
+        EXTERNAL_IP="$AUTO_EXTERNAL_IP"
+    fi
+else
+    warn "Не удалось автоматически определить внешний IP." \
+         "Could not automatically determine external IP."
+    safe_read \
+        "Введите внешний IP-адрес / Enter external IP: " \
+        "" \
+        EXTERNAL_IP
+fi
+
+if [ -z "$EXTERNAL_IP" ]; then
+    error "Внешний IP не может быть пустым." \
+          "External IP cannot be empty."
+fi
+
+info "Используется внешний IP: $EXTERNAL_IP" \
+     "External IP in use: $EXTERNAL_IP"
+
+# ==============================================================================
+# 1.4 DOMAIN
+# ==============================================================================
+
+echo ""
+
 while true; do
-    read -p "Введите доменное имя / Enter domain name (e.g., your-domain.com): " MAIN_DOMAIN < /dev/tty
-    if [ -z "$MAIN_DOMAIN" ]; then warn "Домен не может быть пустым." "Domain cannot be empty."; continue; fi
+    # Никакого автоматического пропуска вопроса.
+    # Даже если старый .env существует — спрашиваем всегда.
+    safe_read \
+        "Введите доменное имя / Enter domain name (e.g., your-domain.com): " \
+        "" \
+        MAIN_DOMAIN
+
+    MAIN_DOMAIN="${MAIN_DOMAIN#http://}"
+    MAIN_DOMAIN="${MAIN_DOMAIN#https://}"
+    MAIN_DOMAIN="${MAIN_DOMAIN%%/*}"
+
+    if [ -z "$MAIN_DOMAIN" ]; then
+        warn "Домен не может быть пустым." \
+             "Domain cannot be empty."
+        continue
+    fi
+
     DOTS="${MAIN_DOMAIN//[^.]}"
-    if [ -z "$DOTS" ]; then warn "Домен должен содержать точку." "Domain must contain a dot."; continue; fi
+    if [ -z "$DOTS" ]; then
+        warn "Домен должен содержать точку." \
+             "Domain must contain a dot."
+        continue
+    fi
+
     break
 done
-fi
+
+info "Используется домен: $MAIN_DOMAIN" \
+     "Domain in use: $MAIN_DOMAIN"
+
+# ==============================================================================
+# 1.5 EMAIL (авто, без вопроса — поле не используется для отправки писем)
+# ==============================================================================
 
 if [ -n "${ADMIN_EMAIL_OVERRIDE:-}" ]; then
     ADMIN_EMAIL="$ADMIN_EMAIL_OVERRIDE"
-    echo "[INFO] Email задан через окружение / Email set via environment: $ADMIN_EMAIL"
 else
-read -p "Email администратора / Admin email [admin@$MAIN_DOMAIN]: " ADMIN_EMAIL < /dev/tty
-ADMIN_EMAIL=${ADMIN_EMAIL:-"admin@$MAIN_DOMAIN"}
+    ADMIN_EMAIL="admin@$MAIN_DOMAIN"
 fi
+
+fi
+
+# ==============================================================================
+# 1.6 ПРОИЗВОДНЫЕ ДОМЕНЫ
+# ==============================================================================
 
 SMP_DOMAIN="smp.$MAIN_DOMAIN"
 XFTP_DOMAIN="files.$MAIN_DOMAIN"
 TURN_DOMAIN="turn.$MAIN_DOMAIN"
 
-# Сохраняем существующие секреты при повторном запуске
-if [ -f "$BASE_DIR/.env" ]; then
-    info "Обнаружен существующий .env — сохраняем действующие пароли." \
-         "Existing .env found — keeping current passwords."
+if [ "$REINSTALL_MODE" = false ]; then
+
+# ==============================================================================
+# 1.7 СОХРАНЕНИЕ СЕКРЕТОВ ИЗ СТАРОГО .env
+# ==============================================================================
+
+SMP_PASS=""
+XFTP_PASS=""
+TURN_USER="simplex"
+TURN_PASS=""
+
+if [ "$EXISTING_ENV" = true ]; then
+
+    info "Читаю из старого .env только секреты..." \
+         "Reading only secrets from existing .env..."
+
     # shellcheck disable=SC1090
-    source "$BASE_DIR/.env"
-    TURN_USER="${TURN_USER:-simplex}"
-    SMP_PASS="${SMP_PASS:-$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)}"
-    XFTP_PASS="${XFTP_PASS:-$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)}"
-    TURN_PASS="${TURN_PASS:-$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)}"
-else
-    SMP_PASS=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
-    XFTP_PASS=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+    OLD_MAIN_DOMAIN=""
+    OLD_EXTERNAL_IP=""
+    OLD_INTERNAL_IP=""
+    OLD_ADMIN_EMAIL=""
+    OLD_WEB_DIR=""
+
+    SMP_PASS=""
+    XFTP_PASS=""
     TURN_USER="simplex"
-    TURN_PASS=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+    TURN_PASS=""
+
+    # Безопасно извлекаем только необходимые значения.
+    # Остальные параметры старого .env намеренно игнорируются.
+
+    SMP_PASS=$(grep -E '^SMP_PASS=' "$OLD_ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
+    XFTP_PASS=$(grep -E '^XFTP_PASS=' "$OLD_ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
+    TURN_USER=$(grep -E '^TURN_USER=' "$OLD_ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
+    TURN_PASS=$(grep -E '^TURN_PASS=' "$OLD_ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- || true)
+
+    [ -z "$TURN_USER" ] && TURN_USER="simplex"
+
+    info "Существующие секреты сохранены." \
+         "Existing secrets preserved."
+
+else
+
+    info "Существующий .env не найден. Будут созданы новые секреты." \
+         "Existing .env not found. New secrets will be generated."
+
 fi
+
+# ==============================================================================
+# 1.8 ГЕНЕРАЦИЯ ОТСУТСТВУЮЩИХ СЕКРЕТОВ
+# ==============================================================================
+
+[ -n "$SMP_PASS" ] || \
+    SMP_PASS=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+
+[ -n "$XFTP_PASS" ] || \
+    XFTP_PASS=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+
+[ -n "$TURN_PASS" ] || \
+    TURN_PASS=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+
+TURN_USER="${TURN_USER:-simplex}"
+
+else
+    info "Секреты и адреса используются из сохранённой конфигурации." \
+         "Secrets and addresses are used from the saved configuration."
+fi
+
+info "Параметры установки собраны." \
+     "Installation parameters collected."
+
+echo ""
+echo "------------------------------------------"
+info "Проверка параметров установки:" \
+     "Installation parameters:"
+echo "  BASE_DIR:    $BASE_DIR"
+echo "  WEB_DIR:     $WEB_DIR"
+echo "  INTERNAL_IP: $INTERNAL_IP"
+echo "  EXTERNAL_IP: $EXTERNAL_IP"
+echo "  DOMAIN:      $MAIN_DOMAIN"
+echo "------------------------------------------"
 
 # ==============================================================================
 # 2. ПРОВЕРКА DNS
@@ -220,7 +541,6 @@ chown -R 1000:1000 "$BASE_DIR/smp" "$BASE_DIR/xftp"
 chmod -R 750 "$BASE_DIR"
 success "Директории созданы." "Directories created."
 
-# Загрузка фавиконки
 if [ ! -s "$WEB_DIR/favicon.ico" ]; then
     info "Загрузка favicon.ico..." "Downloading favicon.ico..."
     if curl -fsSL --max-time 20 \
@@ -249,74 +569,80 @@ if [ ! -s "$BASE_DIR/smp/certificates/$SMP_DOMAIN.crt" ] || [ ! -s "$BASE_DIR/sm
 else
     warn "Существующий сертификат SMP сохранён." "Existing SMP certificate preserved."
 fi
+
 cp "$BASE_DIR/smp/certificates/$SMP_DOMAIN.crt" "$BASE_DIR/smp/config/server.crt"
 cp "$BASE_DIR/smp/certificates/$SMP_DOMAIN.key" "$BASE_DIR/smp/config/server.key"
 chown 1000:1000 "$BASE_DIR/smp/config/server."* "$BASE_DIR/smp/certificates/"*
 success "TLS сертификаты SMP готовы." "SMP TLS certificates ready."
 
 # ==============================================================================
-# 5. .env
+# 5. .env (БЕЗОПАСНАЯ ГЕНЕРАЦИЯ)
 # ==============================================================================
-cat > "$BASE_DIR/.env" << EOF
-MAIN_DOMAIN=$MAIN_DOMAIN
-SMP_DOMAIN=$SMP_DOMAIN
-XFTP_DOMAIN=$XFTP_DOMAIN
-TURN_DOMAIN=$TURN_DOMAIN
-EXTERNAL_IP=$EXTERNAL_IP
-INTERNAL_IP=$INTERNAL_IP
-ADMIN_EMAIL=$ADMIN_EMAIL
-SMP_PASS=$SMP_PASS
-XFTP_PASS=$XFTP_PASS
-TURN_USER=$TURN_USER
-TURN_PASS=$TURN_PASS
-BASE_DIR=$BASE_DIR
-WEB_DIR=$WEB_DIR
-TZ=$(grep timezone /etc/synoinfo.conf 2>/dev/null | cut -d'"' -f2 || echo "UTC")
-EOF
+TZ_VALUE=$(grep timezone /etc/synoinfo.conf 2>/dev/null | cut -d'"' -f2 || echo "UTC")
+
+{
+    printf '%s\n' "MAIN_DOMAIN=$MAIN_DOMAIN"
+    printf '%s\n' "SMP_DOMAIN=$SMP_DOMAIN"
+    printf '%s\n' "XFTP_DOMAIN=$XFTP_DOMAIN"
+    printf '%s\n' "TURN_DOMAIN=$TURN_DOMAIN"
+    printf '%s\n' "EXTERNAL_IP=$EXTERNAL_IP"
+    printf '%s\n' "INTERNAL_IP=$INTERNAL_IP"
+    printf '%s\n' "ADMIN_EMAIL=$ADMIN_EMAIL"
+    printf '%s\n' "SMP_PASS=$SMP_PASS"
+    printf '%s\n' "XFTP_PASS=$XFTP_PASS"
+    printf '%s\n' "TURN_USER=$TURN_USER"
+    printf '%s\n' "TURN_PASS=$TURN_PASS"
+    printf '%s\n' "BASE_DIR=$BASE_DIR"
+    printf '%s\n' "WEB_DIR=$WEB_DIR"
+    printf '%s\n' "TZ=$TZ_VALUE"
+} > "$BASE_DIR/.env"
+
 chmod 600 "$BASE_DIR/.env"
-success ".env создан." ".env created."
+success ".env создан безопасно." ".env created securely."
 
 # ==============================================================================
-# 6. DOCKER COMPOSE (фиксированные версии образов)
+# 6. DOCKER COMPOSE
 # ==============================================================================
 info "Создание docker-compose.yml..." "Creating docker-compose.yml..."
 cat > "$BASE_DIR/docker-compose.yml" << COMPOSEOF
 services:
   smp-server:
-    image: simplexchat/smp-server:v6.5.2
+    image: ${SMP_IMAGE}
     container_name: simplex-smp
     restart: unless-stopped
     ports:
       - "5223:5223"
       - "5224:443"
     volumes:
-      - ${BASE_DIR}/smp/config:/etc/opt/simplex:rw
-      - ${BASE_DIR}/smp/data:/var/opt/simplex:rw
-      - ${BASE_DIR}/smp/logs:/var/log/simplex:rw
-      - ${BASE_DIR}/smp/certificates:/certificates:rw
+      - \${BASE_DIR}/smp/config:/etc/opt/simplex:rw
+      - \${BASE_DIR}/smp/data:/var/opt/simplex:rw
+      - \${BASE_DIR}/smp/logs:/var/log/simplex:rw
+      - \${BASE_DIR}/smp/certificates:/certificates:rw
     environment:
-      - ADDR=${SMP_DOMAIN}
-      - PASS=${SMP_PASS}
+      - ADDR=\${SMP_DOMAIN}
+      - PASS=\${SMP_PASS}
       - STORE_LOG=on
-      - SMP_SERVER_TLS_CERT=/certificates/${SMP_DOMAIN}.crt
-      - SMP_SERVER_TLS_KEY=/certificates/${SMP_DOMAIN}.key
+      - SMP_SERVER_TLS_CERT=/certificates/\${SMP_DOMAIN}.crt
+      - SMP_SERVER_TLS_KEY=/certificates/\${SMP_DOMAIN}.key
+
   xftp-server:
-    image: simplexchat/xftp-server:v6.5.2
+    image: ${XFTP_IMAGE}
     container_name: simplex-xftp
     restart: unless-stopped
     ports:
       - "7788:443"
     volumes:
-      - ${BASE_DIR}/xftp/config:/etc/opt/simplex-xftp:rw
-      - ${BASE_DIR}/xftp/data:/var/opt/simplex-xftp:rw
-      - ${BASE_DIR}/xftp/files:/srv/xftp:rw
+      - \${BASE_DIR}/xftp/config:/etc/opt/simplex-xftp:rw
+      - \${BASE_DIR}/xftp/data:/var/opt/simplex-xftp:rw
+      - \${BASE_DIR}/xftp/files:/srv/xftp:rw
     environment:
-      - ADDR=${XFTP_DOMAIN}
+      - ADDR=\${XFTP_DOMAIN}
       - QUOTA=100gb
-      - PASS=${XFTP_PASS}
+      - PASS=\${XFTP_PASS}
     command: ["xftp-server", "run"]
+
   turn-server:
-    image: coturn/coturn:4.6.3-r0
+    image: ${TURN_IMAGE}
     container_name: simplex-turn
     restart: unless-stopped
     network_mode: host
@@ -324,11 +650,11 @@ services:
       --verbose
       --listening-port=3478
       --tls-listening-port=5349
-      --listening-ip=${INTERNAL_IP}
-      --relay-ip=${INTERNAL_IP}
-      --external-ip=${EXTERNAL_IP}
-      --realm=${TURN_DOMAIN}
-      --user=${TURN_USER}:${TURN_PASS}
+      --listening-ip=\${INTERNAL_IP}
+      --relay-ip=\${INTERNAL_IP}
+      --external-ip=\${EXTERNAL_IP}
+      --realm=\${TURN_DOMAIN}
+      --user=\${TURN_USER}:\${TURN_PASS}
       --lt-cred-mech
       --min-port=49152
       --max-port=65535
@@ -338,10 +664,15 @@ COMPOSEOF
 success "docker-compose.yml создан." "docker-compose.yml created."
 
 # ==============================================================================
-# 7. ИНИЦИАЛИЗАЦИЯ XFTP (версия совпадает с runtime)
+# 7. ИНИЦИАЛИЗАЦИЯ XFTP
 # ==============================================================================
 info "Проверка инициализации XFTP сервера..." "Checking XFTP server initialization..."
 XFTP_FP_FILE="$BASE_DIR/xftp/config/fingerprint"
+
+cleanup_xftp_init() {
+    local name="$1"
+    docker rm -f "$name" >/dev/null 2>&1 || true
+}
 
 if [ -s "$XFTP_FP_FILE" ] && [ "$(head -1 "$XFTP_FP_FILE")" != "PENDING" ]; then
     XFTP_FP_EXISTING=$(head -1 "$XFTP_FP_FILE")
@@ -355,6 +686,7 @@ else
 
     info "Запуск инициализации XFTP..." "Starting XFTP initialization..."
     XFTP_INIT_NAME="simplex-xftp-init-$$"
+    trap "cleanup_xftp_init '$XFTP_INIT_NAME'" EXIT ERR
 
     if ! docker run -d --name "$XFTP_INIT_NAME" \
         -e ADDR="${XFTP_DOMAIN}" \
@@ -362,10 +694,9 @@ else
         -e PASS="${XFTP_PASS}" \
         -v "$BASE_DIR/xftp/config:/etc/opt/simplex-xftp" \
         -v "$BASE_DIR/xftp/data:/var/opt/simplex-xftp" \
-        simplexchat/xftp-server:v6.5.2 \
+        "$XFTP_IMAGE" \
         xftp-server init -n "$XFTP_DOMAIN" >/dev/null; then
         docker logs "$XFTP_INIT_NAME" 2>&1 | tail -50 || true
-        docker rm -f "$XFTP_INIT_NAME" >/dev/null 2>&1 || true
         error "Не удалось запустить XFTP init." "Failed to start XFTP init."
     fi
 
@@ -382,12 +713,12 @@ else
         warn "XFTP fingerprint не появился за 30 секунд. Логи init:" \
              "XFTP fingerprint did not appear within 30 seconds. Init logs:"
         docker logs "$XFTP_INIT_NAME" 2>&1 | tail -80 || true
-        docker rm -f "$XFTP_INIT_NAME" >/dev/null 2>&1 || true
         error "Не удалось получить XFTP fingerprint." "Failed to obtain XFTP fingerprint."
     fi
 
     XFTP_FP_INIT=$(head -1 "$XFTP_FP_FILE")
-    docker rm -f "$XFTP_INIT_NAME" >/dev/null 2>&1 || true
+    cleanup_xftp_init "$XFTP_INIT_NAME"
+    trap - EXIT ERR
     success "XFTP identity создана: $XFTP_FP_INIT" "XFTP identity created: $XFTP_FP_INIT"
     success "XFTP инициализирован." "XFTP initialized."
 fi
@@ -398,7 +729,7 @@ chown -R 1000:1000 "$BASE_DIR/xftp"
 # 8. ЗАПУСК
 # ==============================================================================
 cd "$BASE_DIR"
-info "Загрузка Docker-образов SimpleX Chat v6.5.2..." "Pulling Docker images SimpleX Chat v6.5.2..."
+info "Загрузка Docker-образов SimpleX Chat..." "Pulling Docker images SimpleX Chat..."
 if ! $COMPOSE_CMD pull; then
     error "Не удалось загрузить Docker-образы." "Failed to pull Docker images."
 fi
@@ -423,7 +754,6 @@ success "Все контейнеры запущены." "All containers started.
 # ==============================================================================
 info "Ожидание генерации fingerprint (до 120 сек)..." "Waiting for fingerprint generation (up to 120 sec)..."
 sleep 10
-
 WAIT=0; SMP_FP=""
 while [ $WAIT -lt 55 ] && [ -z "$SMP_FP" ]; do
     SMP_FP=$(docker logs simplex-smp 2>&1 | grep -i "Fingerprint:" | tail -1 | awk '{print $NF}')
@@ -453,62 +783,54 @@ XFTP_ADDRESS="xftp://${XFTP_FP}:${XFTP_PASS}@${XFTP_DOMAIN}:7788"
 TURN_UDP="turn:${TURN_USER}:${TURN_PASS}@${TURN_DOMAIN}:3478?transport=udp"
 TURN_TLS="turns:${TURN_USER}:${TURN_PASS}@${TURN_DOMAIN}:5349?transport=tcp"
 STUN_ADDR="stun:${TURN_DOMAIN}:3478"
-
 success "Fingerprint получены." "Fingerprints obtained."
 
 # ==============================================================================
-# 10. BACKUP (использует BASE_DIR из установщика, без выбора языка)
+# 10. BACKUP SCRIPT
 # ==============================================================================
 info "Создание скрипта резервного копирования..." "Creating backup script..."
 BACKUP_SCRIPT="$BASE_DIR/simplex-backup.sh"
-
-cat > "$BACKUP_SCRIPT" << BKEOF
+cat > "$BACKUP_SCRIPT" << 'BKEOF'
 #!/bin/bash
 set -e
-BASE_DIR="$BASE_DIR"
-BACKUP_DIR="\$BASE_DIR/backups"
-DATE=\$(date +%Y%m%d_%H%M%S)
-mkdir -p "\$BACKUP_DIR"
-OUT="\$BACKUP_DIR/simplex-backup-\$DATE.tar.gz"
-
-if ! tar -czf "\$OUT" -C "\$BASE_DIR" \\
-    .env docker-compose.yml CONNECTION_DETAILS.txt \\
-    smp/config smp/data smp/certificates \\
+BASE_DIR="__BASE_DIR__"
+BACKUP_DIR="$BASE_DIR/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+mkdir -p "$BACKUP_DIR"
+OUT="$BACKUP_DIR/simplex-backup-$DATE.tar.gz"
+if ! tar -czf "$OUT" -C "$BASE_DIR" \
+    .env docker-compose.yml CONNECTION_DETAILS.txt \
+    smp/config smp/data smp/certificates \
     xftp/config xftp/data xftp/files; then
-    rm -f "\$OUT"
+    rm -f "$OUT"
     echo "Backup failed" >&2
     exit 1
 fi
-
-find "\$BACKUP_DIR" -name "simplex-backup-*.tar.gz" -mtime +14 -delete
-echo "Backup created: \$OUT"
+find "$BACKUP_DIR" -name "simplex-backup-*.tar.gz" -mtime +14 -delete
+echo "Backup created: $OUT"
 BKEOF
-
+sed -i "s|__BASE_DIR__|$BASE_DIR|g" "$BACKUP_SCRIPT"
 chmod 700 "$BACKUP_SCRIPT"
 success "Backup-скрипт создан." "Backup script created."
 
 # ==============================================================================
-# 11. STATUS-UPDATE.SH + CRON (WEB_DIR передаётся явно)
+# 11. STATUS-UPDATE.SH + CRON
 # ==============================================================================
 info "Создание скрипта обновления статуса..." "Creating status update script..."
 STATUS_SCRIPT="$BASE_DIR/status-update.sh"
-
 cat > "$STATUS_SCRIPT" << STEOF
 #!/bin/bash
 BASE_DIR="$BASE_DIR"
 WEB_DIR="$WEB_DIR"
 OUT="\${WEB_DIR}/status.json"
 mkdir -p "\$(dirname "\$OUT")"
-
 SMP=\$(docker inspect --format='{{.State.Status}}' simplex-smp 2>/dev/null || echo "not_found")
 XFTP=\$(docker inspect --format='{{.State.Status}}' simplex-xftp 2>/dev/null || echo "not_found")
 TURN=\$(docker inspect --format='{{.State.Status}}' simplex-turn 2>/dev/null || echo "not_found")
-
 printf '{"simplex-smp":"%s","simplex-xftp":"%s","simplex-turn":"%s","updated":"%s"}\n' \\
     "\$SMP" "\$XFTP" "\$TURN" "\$(date '+%Y-%m-%d %H:%M:%S')" > "\$OUT"
 chmod 644 "\$OUT"
 STEOF
-
 chmod 755 "$STATUS_SCRIPT"
 "$STATUS_SCRIPT"
 
@@ -529,14 +851,12 @@ if ! grep -q "simplex-backup.sh" /etc/crontab 2>/dev/null; then
 else
     warn "Cron-задача simplex-backup.sh уже существует." "simplex-backup.sh cron already exists."
 fi
-
 success "status-update.sh создан." "status-update.sh created."
 
 # ==============================================================================
 # 12. WEB-ФАЙЛЫ
 # ==============================================================================
 info "Создание веб-страниц..." "Creating web pages..."
-
 QRCODE_JS="$WEB_DIR/qrcode.min.js"
 if [ ! -s "$QRCODE_JS" ]; then
     info "Загрузка QRCode.js..." "Downloading QRCode.js..."
@@ -552,7 +872,6 @@ if [ ! -s "$QRCODE_JS" ]; then
 fi
 chmod 644 "$QRCODE_JS"
 
-# --- 12a. qrsmp.html ---
 cat > "$WEB_DIR/qrsmp.html" << HTMLEOF
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark">
@@ -588,7 +907,7 @@ cat > "$WEB_DIR/qrsmp.html" << HTMLEOF
 <div class="box note"><strong>💡 Рекомендация</strong>Не публикуйте адреса серверов (SMP, XFTP, TURN) и QR-коды в открытом доступе. Перед расширением круга пользователей за пределы семьи или близких знакомых рекомендуется проконсультироваться с квалифицированным юристом, специализирующимся на информационном праве.</div>
 </section>
 <div class="card">
-<div class="st-head"><div><div class="st-title">Серверная инфраструктура</div><div class="st-sub">SimpleX Installer 9.5</div></div><div class="online na" id="ov-status"><span class="odot na" id="ov-dot"></span><span id="ov-text">…</span></div></div>
+<div class="st-head"><div><div class="st-title">Серверная инфраструктура</div><div class="st-sub">SimpleX Installer ${INSTALLER_VERSION}</div></div><div class="online na" id="ov-status"><span class="odot na" id="ov-dot"></span><span id="ov-text">…</span></div></div>
 <div class="st-grid"><div class="st-item"><div class="st-name">SMP</div><div class="st-val na" id="st-smp">…</div></div><div class="st-item"><div class="st-name">XFTP</div><div class="st-val na" id="st-xftp">…</div></div><div class="st-item"><div class="st-name">TURN</div><div class="st-val na" id="st-turn">…</div></div></div>
 </div>
 <div class="card">
@@ -614,7 +933,7 @@ ${TURN_TLS}</span></div>
 <div class="irow"><div class="il">XFTP</div><div class="iv">${XFTP_DOMAIN}:7788</div></div>
 <div class="irow"><div class="il">TURN / STUN</div><div class="iv">${TURN_DOMAIN}</div></div>
 <div class="irow"><div class="il">Протокол</div><div class="iv">TLS / UDP</div></div>
-<div class="irow"><div class="il">Версия инсталлера</div><div class="iv">9.5</div></div>
+<div class="irow"><div class="il">Версия инсталлера</div><div class="iv">${INSTALLER_VERSION}</div></div>
 </div>
 <div class="card">
 <div class="ct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></svg>Порты</div>
@@ -633,7 +952,7 @@ docker compose pull && docker compose up -d</div>
 <div class="sec-t">⚠️ Безопасность</div>
 <ul><li>Не публикуйте QR-коды в открытом доступе.</li><li>Не передавайте адреса SMP и XFTP посторонним.</li><li>Храните резервные копии отдельно от NAS.</li><li>При компрометации создайте новые адреса.</li><li>Регулярно обновляйте контейнеры SimpleX.</li><li>Файл .env содержит все пароли — не передавайте его.</li></ul>
 </div>
-<div class="footer">SimpleX Server · ${MAIN_DOMAIN} · Installer 9.5 · $(date '+%d.%m.%Y')</div>
+<div class="footer">SimpleX Server · ${MAIN_DOMAIN} · Installer ${INSTALLER_VERSION} · $(date '+%d.%m.%Y')</div>
 </div>
 <div class="modal" id="qr-modal" onclick="closeQR(event)"><div class="mcont"><div class="mh"></div><div style="font-size:17px;font-weight:750" id="qr-title">QR</div><div class="qrf" id="qr-c"></div><div style="color:var(--muted);font-size:12px">Отсканируйте этот QR-код в приложении SimpleX Chat</div></div></div>
 <div class="toast" id="toast">Скопировано</div>
@@ -660,7 +979,6 @@ checkStatus();setInterval(checkStatus,60000);
 HTMLEOF
 chmod 644 "$WEB_DIR/qrsmp.html"
 
-# --- 12b. index.html ---
 cat > "$WEB_DIR/index.html" << INDEXEOF
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark">
@@ -733,7 +1051,7 @@ h1{margin:0 0 .5rem;font-size:1.6rem;letter-spacing:-.5px}
 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
 Панель управления
 </a>
-<div class="footer">SimpleX Installer 9.5 · ${MAIN_DOMAIN}</div>
+<div class="footer">SimpleX Installer ${INSTALLER_VERSION} · ${MAIN_DOMAIN}</div>
 </div>
 </div>
 <script>
@@ -747,7 +1065,6 @@ INDEXEOF
 chmod 644 "$WEB_DIR/index.html"
 success "index.html создан." "index.html created."
 
-# --- 12c. .htaccess ---
 cat > "$WEB_DIR/.htaccess" << EOF
 <Files "qrsmp.html">
 AuthType Basic
@@ -763,8 +1080,9 @@ Require valid-user
 </Files>
 EOF
 chmod 644 "$WEB_DIR/.htaccess"
+warn "ВАЖНО: защита паролем сработает только если в Web Station включена опция AllowOverride для виртуального хоста ${MAIN_DOMAIN}." \
+     "IMPORTANT: password protection only works if Web Station has AllowOverride enabled for the ${MAIN_DOMAIN} virtual host."
 
-# --- 12d. .htpasswd ---
 WEB_GROUP=""
 if getent group http >/dev/null 2>&1; then
     WEB_GROUP="http"
@@ -779,7 +1097,7 @@ if [ ! -f "$WEB_DIR/.htpasswd" ]; then
 else
     warn ".htpasswd уже существует. Пароль не изменён." \
          ".htpasswd already exists. Password not changed."
-    WEB_PASS="(используется существующий пароль)"
+    WEB_PASS=""
 fi
 
 if [ -n "$WEB_GROUP" ]; then
@@ -788,68 +1106,97 @@ if [ -n "$WEB_GROUP" ]; then
     success ".htpasswd защищён: root:${WEB_GROUP}, права 640." \
             ".htpasswd protected: root:${WEB_GROUP}, permissions 640."
 else
-    warn "Группа http не найдена. Используется chmod 644 для .htpasswd." \
-         "http group not found. Using chmod 644 for .htpasswd."
+    warn "Группа http не найдена. Файл .htpasswd закрыт максимально (600). Убедитесь, что процесс Apache/Web Station имеет к нему доступ на чтение." \
+         "http group not found. .htpasswd locked down to 600. Make sure Apache/Web Station process can still read it."
     chown root:root "$WEB_DIR/.htpasswd"
-    chmod 644 "$WEB_DIR/.htpasswd"
+    chmod 600 "$WEB_DIR/.htpasswd"
 fi
 
-if [ -n "${WEB_PASS:-}" ] && [ "$WEB_PASS" != "(используется существующий пароль)" ]; then
-    success "Веб-пароль создан: admin / ${WEB_PASS}" \
-            "Web password created: admin / ${WEB_PASS}"
-    warn "Сохраните этот пароль! Он показывается только один раз." \
-         "Save this password! It is shown only once."
+if [ -n "${WEB_PASS:-}" ]; then
+    success "Веб-пароль создан и сохранён в CONNECTION_DETAILS.txt" \
+            "Web password created and saved in CONNECTION_DETAILS.txt"
+    warn "Сохраните пароль из файла отчёта! Он показывается только один раз." \
+         "Save the password from the report file! It is shown only once."
 fi
 
 success "Веб-файлы созданы в $WEB_DIR" "Web files created in $WEB_DIR"
+warn "Панель управления будет доступна только по HTTP, пока вы не настроите HTTPS в Web Station." \
+     "The control panel will be HTTP-only until you configure HTTPS in Web Station."
 
 # ==============================================================================
 # 13. ОТЧЁТ
 # ==============================================================================
 RESULT_FILE="$BASE_DIR/CONNECTION_DETAILS.txt"
-cat > "$RESULT_FILE" << EOF
-================================================================
-SIMPLEX CHAT SERVER УСПЕШНО РАЗВЕРНУТ (v9.5)
-================================================================
-Дата: $(date)
-Домен: $MAIN_DOMAIN
-Внешний IP: $EXTERNAL_IP
-Внутренний IP: $INTERNAL_IP
+{
+    echo "================================================================"
+    echo "SIMPLEX CHAT SERVER УСПЕШНО РАЗВЕРНУТ (v${INSTALLER_VERSION})"
+    echo "================================================================"
+    echo "Дата: $(date)"
+    echo "Домен: $MAIN_DOMAIN"
+    echo "Внешний IP: $EXTERNAL_IP"
+    echo "Внутренний IP: $INTERNAL_IP"
+    echo ""
+    echo "🔗 АДРЕСА ДЛЯ КЛИЕНТА:"
+    echo "SMP:  ${SMP_ADDRESS}"
+    echo "XFTP: ${XFTP_ADDRESS}"
+    echo ""
+    echo "📞 TURN / STUN:"
+    echo "${STUN_ADDR}"
+    echo "${TURN_UDP}"
+    echo "${TURN_TLS}"
+    echo ""
+    echo "🌐 ПАНЕЛЬ УПРАВЛЕНИЯ:"
+    echo "URL: https://info.smp.${MAIN_DOMAIN}  (сначала настройте HTTPS-сертификат в Web Station!)"
+    echo "⚠️  До настройки HTTPS сертификата пароль передаётся в открытом виде."
+    echo "Логин / Login: admin"
+    echo "Пароль / Password: ${WEB_PASS:-см. существующий .htpasswd / see existing .htpasswd}"
+    echo ""
+    echo "📁 ФАЙЛЫ:"
+    echo "Конфигурация / Config: $BASE_DIR/.env"
+    echo "Веб-страницы / Web pages: $WEB_DIR/"
+    echo "Backup: $BACKUP_SCRIPT"
+    echo "Статус: $BASE_DIR/status-update.sh"
+    echo ""
+    echo "⚠️ ДАЛЬНЕЙШИЕ ДЕЙСТВИЯ / NEXT STEPS:"
+    echo "1. Настройте Web Station: корень → $WEB_DIR"
+    echo "2. Проброс портов: SMP 5223, 5224, XFTP 7788, TURN 3478, 5349, 49152-65535"
+    echo "3. DNS A-записи: smp, files, turn, info.smp → $EXTERNAL_IP"
+    echo "4. Откройте порты в Брандмауэре DSM"
+    echo "================================================================"
+} > "$RESULT_FILE"
 
-🔗 АДРЕСА ДЛЯ КЛИЕНТА:
-SMP:  ${SMP_ADDRESS}
-XFTP: ${XFTP_ADDRESS}
-
-📞 TURN / STUN:
-${STUN_ADDR}
-${TURN_UDP}
-${TURN_TLS}
-
-🌐 ПАНЕЛЬ УПРАВЛЕНИЯ:
-URL: http://info.smp.${MAIN_DOMAIN}
-Логин / Login: admin
-Пароль / Password: ${WEB_PASS:-см. существующий .htpasswd / see existing .htpasswd}
-
-📁 ФАЙЛЫ:
-Конфигурация / Config: $BASE_DIR/.env
-Веб-страницы / Web pages: $WEB_DIR/
-Backup: $BACKUP_SCRIPT
-Статус: $BASE_DIR/status-update.sh
-
-⚠️ ДАЛЬНЕЙШИЕ ДЕЙСТВИЯ / NEXT STEPS:
-1. Настройте Web Station / Configure Web Station: корень / root → $WEB_DIR
-2. Проброс портов / Port forwarding: SMP 5223, 5224, XFTP 7788, TURN 3478, 5349, 49152-65535
-3. DNS A-записи / DNS A records: smp, files, turn, info.smp → $EXTERNAL_IP
-4. Откройте порты в Брандмауэре DSM / Open ports in DSM Firewall
-================================================================
-EOF
-
+chmod 600 "$RESULT_FILE"
 echo ""
 cat "$RESULT_FILE"
 echo ""
+
 info "Статус контейнеров:" "Container status:"
 $COMPOSE_CMD ps
 echo ""
+
+# ==============================================================================
+# 14. POST-INSTALL ПРОВЕРКА
+# ==============================================================================
+info "Проверка защиты панели управления..." "Checking control panel protection..."
+
+PANEL_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+    -H "Host: info.smp.${MAIN_DOMAIN}" "http://127.0.0.1/qrsmp.html" 2>/dev/null || echo "000")
+
+if [ "$PANEL_HTTP_CODE" = "000" ]; then
+    PANEL_HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 5 \
+        -H "Host: info.smp.${MAIN_DOMAIN}" "https://127.0.0.1/qrsmp.html" 2>/dev/null || echo "000")
+fi
+
+if [ "$PANEL_HTTP_CODE" = "200" ]; then
+    warn "КРИТИЧНО: qrsmp.html отдаётся БЕЗ пароля (HTTP 200)! Включите AllowOverride для виртуального хоста в Web Station." \
+         "CRITICAL: qrsmp.html is served WITHOUT a password (HTTP 200)! Enable AllowOverride for the virtual host in Web Station."
+elif [ "$PANEL_HTTP_CODE" = "401" ]; then
+    success "Панель защищена паролем (HTTP 401 без авторизации)." "Panel is password-protected (HTTP 401 without auth)."
+else
+    info "Не удалось проверить защиту панели локально (код: $PANEL_HTTP_CODE). После настройки Web Station проверьте вручную: откройте https://info.smp.${MAIN_DOMAIN}/qrsmp.html в приватном окне браузера." \
+         "Could not verify panel protection locally (code: $PANEL_HTTP_CODE). After configuring Web Station, verify manually: open https://info.smp.${MAIN_DOMAIN}/qrsmp.html in a private browser window."
+fi
+
 success "Установка завершена." "Installation completed."
 info "Настройте Web Station для доступа к панели управления." \
      "Configure Web Station to access the control panel."
