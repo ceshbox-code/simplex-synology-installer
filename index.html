@@ -44,6 +44,8 @@ pre code{background:none;padding:0;color:var(--text);font-size:.85rem;line-heigh
 .box.warn{background:var(--warn-bg);border:1px solid var(--warn-bd);color:var(--warn-t)}
 .box.info{background:var(--info-bg);border:1px solid var(--line);color:var(--muted)}
 .box.note{background:var(--note-bg);border:1px solid var(--line);color:var(--muted)}
+.box.success{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.16);color:var(--text)}
+.box.success strong{color:#4ade80}
 .port-table{width:100%;border-collapse:collapse;margin:.75rem 0;font-size:.85rem}
 .port-table th,.port-table td{padding:.5rem .75rem;border:1px solid var(--line);text-align:left}
 .port-table th{background:var(--info-bg);color:var(--purple);font-weight:700}
@@ -56,13 +58,33 @@ pre code{background:none;padding:0;color:var(--text);font-size:.85rem;line-heigh
 .lang-toggle{position:fixed;top:1rem;left:1rem;z-index:100;display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
 .lang-toggle button{padding:.5rem .8rem;font-size:.8rem;font-weight:700;background:transparent;color:var(--muted);border:none;cursor:pointer}
 .lang-toggle button.active{background:var(--purple);color:#fff}
+/* ===== НАВИГАЦИОННОЕ МЕНЮ ===== */
+.nav-menu{position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:100;display:flex;gap:.4rem;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.35rem .5rem;box-shadow:0 4px 12px rgba(0,0,0,.3);flex-wrap:wrap;justify-content:center;max-width:90%}
+.nav-menu a{color:var(--muted);text-decoration:none;font-size:.7rem;font-weight:600;padding:.3rem .6rem;border-radius:6px;transition:background .2s,color .2s;white-space:nowrap}
+.nav-menu a:hover{background:var(--purple);color:#fff}
 html[data-lang="ru"] .only-en{display:none}
 html[data-lang="en"] .only-ru{display:none}
 footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);margin-top:2rem}
-@media(max-width:600px){h1{font-size:1.7rem}.container{padding:1.25rem 1rem}.platform-grid{flex-wrap:wrap}.platform-card{flex:1 1 calc(50% - .5rem);min-width:calc(50% - .5rem)}}
+@media(max-width:600px){h1{font-size:1.7rem}.container{padding:1.25rem 1rem}.platform-grid{flex-wrap:wrap}.platform-card{flex:1 1 calc(50% - .5rem);min-width:calc(50% - .5rem)}.nav-menu{top:.5rem;padding:.25rem .3rem;gap:.2rem}.nav-menu a{font-size:.6rem;padding:.2rem .4rem}}
+@media(max-width:400px){.nav-menu a{font-size:.5rem;padding:.15rem .3rem}}
 </style>
 </head>
 <body>
+
+<!-- ===== НАВИГАЦИОННОЕ МЕНЮ ===== -->
+<nav class="nav-menu">
+<a href="#about-ru" class="only-ru">💜 О SimpleX</a>
+<a href="#about-en" class="only-en">💜 About</a>
+<a href="#legal-ru" class="only-ru">⚠️ Право</a>
+<a href="#legal-en" class="only-en">⚠️ Legal</a>
+<a href="#install-ru" class="only-ru">📱 Установка</a>
+<a href="#install-en" class="only-en">📱 Install</a>
+<a href="#guide-ru" class="only-ru">🖥️ Инструкция</a>
+<a href="#guide-en" class="only-en">🖥️ Guide</a>
+<a href="#manage-ru" class="only-ru">🔧 Управление</a>
+<a href="#manage-en" class="only-en">🔧 Manage</a>
+</nav>
+
 <button class="toggle-theme" onclick="toggleTheme()" aria-label="Theme">
 <svg id="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
 <svg id="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -71,6 +93,7 @@ footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;
 <button id="btn-ru" class="active" onclick="setLang('ru')">RU</button>
 <button id="btn-en" onclick="setLang('en')">EN</button>
 </div>
+
 <div class="container">
 
 <!-- ==================== РУССКАЯ ВЕРСИЯ ==================== -->
@@ -82,7 +105,68 @@ footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;
 <div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span><span class="feat">🌐 RU / EN</span></div>
 </header>
 
-<section class="card">
+<!-- ==================== БЛОК: О SIMPLEX ==================== -->
+<section class="card" id="about-ru">
+<h2>💜 Что такое SimpleX?</h2>
+<p><strong>SimpleX</strong> — это первый мессенджер, который не требует идентификаторов пользователей: нет номеров телефонов, никнеймов или публичных ключей, привязанных к личности. Вместо этого каждый пользователь получает уникальные одноразовые адреса для каждого соединения.</p>
+
+<div class="platform-grid" style="margin-top:1.5rem;">
+<div class="platform-card" style="cursor:default;">
+<span class="platform-icon">🔐</span>
+<span class="platform-name">Полная приватность</span>
+<span class="platform-link">Нет метаданных</span>
+</div>
+<div class="platform-card" style="cursor:default;">
+<span class="platform-icon">🌍</span>
+<span class="platform-name">Децентрализация</span>
+<span class="platform-link">Ваш сервер — ваши правила</span>
+</div>
+<div class="platform-card" style="cursor:default;">
+<span class="platform-icon">🔄</span>
+<span class="platform-name">Квантово-устойчивый</span>
+<span class="platform-link">Двойная защита</span>
+</div>
+<div class="platform-card" style="cursor:default;">
+<span class="platform-icon">📱</span>
+<span class="platform-name">Кроссплатформенный</span>
+<span class="platform-link">iOS, Android, Desktop</span>
+</div>
+</div>
+
+<h3>🚀 Философия и преимущества</h3>
+<div class="box info"><strong>💡 Почему SimpleX уникален?</strong>
+<ul>
+<li><strong>Нет глобальной идентификации</strong> — вы не привязаны к номеру телефона или email. Ваш профиль существует только у ваших контактов.</li>
+<li><strong>Одноразовые адреса</strong> — для каждого нового контакта создаётся уникальный адрес. Прекратили общение — адрес удаляется, связь невозможно восстановить.</li>
+<li><strong>Защита от спама</strong> — поскольку каждый адрес уникален и используется только для одного контакта, спам технически невозможен.</li>
+<li><strong>Вы контролируете сервер</strong> — запустив свой SMP, XFTP и TURN сервер, вы полностью контролируете свою инфраструктуру. Никто не видит, кто с кем общается.</li>
+<li><strong>Квантово-устойчивое шифрование</strong> — SimpleX использует двойное шифрование с пост-квантовым алгоритмом, защищая переписку даже от будущих квантовых компьютеров.</li>
+<li><strong>Открытый исходный код</strong> — весь код доступен на GitHub, что позволяет любому независимо проверить его безопасность.</li>
+</ul></div>
+
+<div class="box note"><strong>📌 Важно понимать</strong><br>
+SimpleX — это не очередной мессенджер с "режимом инкогнито". Это принципиально иная архитектура, где отсутствие идентификаторов заложено в основу. Вы общаетесь не с "пользователем", а с конкретным адресом, который существует ровно столько, сколько нужно.</div>
+
+<!-- ИТОГ — тёмный текст -->
+<div class="box success" style="color:var(--text);"><strong>✅ Итог</strong><br>
+Запустив свой сервер SimpleX, вы получаете полностью приватное средство общения, где никто, включая вас как администратора, не может видеть переписку пользователей (она сквозная зашифрована), а метаданные (кто с кем общается) недоступны сторонним наблюдателям.</div>
+</section>
+
+<!-- ==================== БЛОК: ПРАВОВАЯ ИНФОРМАЦИЯ ==================== -->
+<section class="card" id="legal-ru">
+<h2>⚠️ Правовая информация</h2>
+<div class="box warn"><strong>⚠️ Назначение скрипта</strong>Данный скрипт и сопутствующие материалы предназначены исключительно для развёртывания мессенджера SimpleX Chat на собственном оборудовании владельца в целях личного и семейного использования. Скрипт не предназначен для создания публичных сервисов, доступных неограниченному кругу лиц.</div>
+<div class="box info"><strong>📋 Ответственность пользователя</strong><ul>
+<li>Использование скрипта для предоставления сервиса неограниченному кругу лиц может повлечь обязанность регистрации в качестве организатора распространения информации (ОРИ) в соответствии со ст. 10.1 Федерального закона № 149-ФЗ.</li>
+<li>Обработка персональных данных пользователей регулируется Федеральным законом № 152-ФЗ «О персональных данных».</li>
+<li>Владелец сервера самостоятельно несёт ответственность за соблюдение применимого законодательства, настройку безопасности, резервное копирование и защиту данных.</li>
+<li>Автор скрипта не несёт ответственности за последствия использования, включая сбои, потерю данных или претензии третьих лиц.</li>
+</ul></div>
+<div class="box note"><strong>💡 Рекомендация</strong>Перед развёртыванием сервера для использования за пределами семьи или близких знакомых рекомендуется проконсультироваться с квалифицированным юристом, специализирующимся на информационном праве. Не публикуйте адреса серверов (SMP, XFTP, TURN) и QR-коды в открытом доступе.</div>
+</section>
+
+<!-- ==================== БЛОК: УСТАНОВКА КЛИЕНТА ==================== -->
+<section class="card" id="install-ru">
 <h2>📱 Установка SimpleX Chat на смартфон</h2>
 <p>Для работы с вашим приватным сервером необходимо установить клиентское приложение SimpleX Chat. Выберите платформу вашего устройства:</p>
 <div class="platform-grid">
@@ -107,24 +191,20 @@ footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;
 <li>Добавьте первый контакт: нажмите <strong>+</strong> → <strong>Пригласить друга</strong> → отсканируйте QR-код собеседника.</li>
 </ol>
 </section>
-<section class="card">
-<h2>⚠️ Правовая информация</h2>
-<div class="box warn"><strong>⚠️ Назначение скрипта</strong>Данный скрипт и сопутствующие материалы предназначены исключительно для развёртывания мессенджера SimpleX Chat на собственном оборудовании владельца в целях личного и семейного использования. Скрипт не предназначен для создания публичных сервисов, доступных неограниченному кругу лиц.</div>
-<div class="box info"><strong>📋 Ответственность пользователя</strong><ul>
-<li>Использование скрипта для предоставления сервиса неограниченному кругу лиц может повлечь обязанность регистрации в качестве организатора распространения информации (ОРИ) в соответствии со ст. 10.1 Федерального закона № 149-ФЗ.</li>
-<li>Обработка персональных данных пользователей регулируется Федеральным законом № 152-ФЗ «О персональных данных».</li>
-<li>Владелец сервера самостоятельно несёт ответственность за соблюдение применимого законодательства, настройку безопасности, резервное копирование и защиту данных.</li>
-<li>Автор скрипта не несёт ответственности за последствия использования, включая сбои, потерю данных или претензии третьих лиц.</li>
-</ul></div>
-<div class="box note"><strong>💡 Рекомендация</strong>Перед развёртыванием сервера для использования за пределами семьи или близких знакомых рекомендуется проконсультироваться с квалифицированным юристом, специализирующимся на информационном праве. Не публикуйте адреса серверов (SMP, XFTP, TURN) и QR-коды в открытом доступе.</div>
-</section>
-<section class="card">
+
+<!-- ==================== БЛОК: ИНСТРУКЦИЯ ПО УСТАНОВКЕ СЕРВЕРА ==================== -->
+<section class="card" id="guide-ru">
 <h2>🖥️ Подробная инструкция по установке сервера</h2>
 <h3><span class="step-num">1</span> Подготовка NAS</h3>
 <h4>1.1 Установка Docker</h4>
-<ol><li>Откройте <strong>Package Center</strong> в DSM.</li><li>В поиске введите <code>Docker</code> (для DSM 7.2+) или <code>Container Manager</code> (для DSM 7.1).</li><li>Нажмите <strong>Установить</strong> и дождитесь завершения.</li><li>После установки откройте Docker/Container Manager хотя бы один раз для завершения инициализации.</li></ol>
+<ol><li>Откройте <strong>Package Center</strong> в DSM.</li><li>В поиске введите <code>Docker</code> (для DSM 7.2+) или <code>Container Manager</code> (для DSM 7.1).</li>
+<li>Нажмите <strong>Установить</strong> и дождитесь завершения.</li>
+<li>После установки откройте Docker/Container Manager хотя бы один раз для завершения инициализации.</li></ol>
 <h4>1.2 Включение SSH</h4>
-<ol><li>Откройте <strong>Панель управления → Терминал и SNMP → Терминал</strong>.</li><li>Поставьте галочку <strong>«Включить службу SSH»</strong>.</li><li>Порт: <code>22</code> (или измените на нестандартный для безопасности).</li><li>Нажмите <strong>Применить</strong>.</li></ol>
+<ol><li>Откройте <strong>Панель управления → Терминал и SNMP → Терминал</strong>.</li>
+<li>Поставьте галочку <strong>«Включить службу SSH»</strong>.</li>
+<li>Порт: <code>22</code> (или измените на нестандартный для безопасности).</li>
+<li>Нажмите <strong>Применить</strong>.</li></ol>
 <h4>1.3 Проверка свободного места</h4>
 <pre><code>df -h /volume1</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 <p>Убедитесь, что доступно минимум <strong>5 ГБ</strong> на целевом томе.</p>
@@ -157,7 +237,11 @@ dig +short info.smp.ваш-домен.ru</code><button class="copy-btn" onclick=
 </table>
 <div class="box note"><strong>💡 Примечание:</strong> Диапазон <code>49152–65535 UDP</code> необходим только для аудио- и видеозвонков. Если звонки не планируются, можно ограничиться портами 3478 и 5349.</div>
 <h3><span class="step-num">4</span> Настройка Брандмауэра DSM</h3>
-<ol><li>Откройте <strong>Панель управления → Безопасность → Брандмауэр</strong>.</li><li>Нажмите <strong>Изменить правила</strong> в активном профиле.</li><li>Добавьте правила <strong>Разрешить</strong> для каждого порта из таблицы выше.</li><li>Убедитесь, что правило стоит <strong>выше</strong> правила «Запретить всё» (если такое есть).</li><li>Нажмите <strong>OK → Применить</strong>.</li></ol>
+<ol><li>Откройте <strong>Панель управления → Безопасность → Брандмауэр</strong>.</li>
+<li>Нажмите <strong>Изменить правила</strong> в активном профиле.</li>
+<li>Добавьте правила <strong>Разрешить</strong> для каждого порта из таблицы выше.</li>
+<li>Убедитесь, что правило стоит <strong>выше</strong> правила «Запретить всё» (если такое есть).</li>
+<li>Нажмите <strong>OK → Применить</strong>.</li></ol>
 <div class="box warn"><strong>⚠️ Важно:</strong> После применения правил брандмауэра убедитесь, что вы не потеряли доступ к DSM. Всегда держите открытым второе окно браузера с DSM для отката изменений.</div>
 <h3><span class="step-num">5</span> Запуск установки</h3>
 <ol>
@@ -180,7 +264,8 @@ dig +short info.smp.ваш-домен.ru</code><button class="copy-btn" onclick=
 <pre><code>cat /volume1/docker/simplex/CONNECTION_DETAILS.txt</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 <div class="box warn"><strong>⚠️ Никому не передавайте этот файл!</strong> Он содержит все секреты вашего сервера.</div>
 <h4>6.2 Настройка Web Station</h4>
-<ol><li>Откройте <strong>DSM → Web Station → Настройки веб-сервера</strong>.</li><li>Нажмите <strong>Создать</strong>.</li>
+<ol><li>Откройте <strong>DSM → Web Station → Настройки веб-сервера</strong>.</li>
+<li>Нажмите <strong>Создать</strong>.</li>
 <li>Заполните параметры:<ul>
 <li><strong>Описание:</strong> <code>SimpleX Control Panel</code></li>
 <li><strong>Корневая папка:</strong> <code>/volume1/web/simplex</code> (том, который вы выбрали при установке на шаге 5)</li>
@@ -210,7 +295,9 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <li><strong>Первый контакт:</strong> нажмите <strong>+</strong> в списке чатов → <strong>Пригласить друга</strong> → отсканируйте QR-код собеседника или отправьте ему ссылку-приглашение.</li></ol>
 <div class="box info" style="margin-top:1.5rem;text-align:center"><strong>✅ Готово!</strong> Сервер полностью развёрнут и готов к работе.</div>
 </section>
-<section class="card">
+
+<!-- ==================== БЛОК: ЧТО УСТАНАВЛИВАЕТСЯ ==================== -->
+<section class="card" id="what-ru">
 <h2>📦 Что устанавливается</h2>
 <div class="platform-grid">
 <div class="platform-card" style="cursor:default"><span class="platform-icon">💬</span><span class="platform-name">SMP Server v6.5.2</span><span class="platform-link">Сообщения · 5223/5224</span></div>
@@ -219,6 +306,8 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <div class="platform-card" style="cursor:default"><span class="platform-icon">📊</span><span class="platform-name">Мониторинг</span><span class="platform-link">Статус · JSON</span></div>
 </div>
 </section>
+
+<!-- ==================== БЛОК: ТРЕБОВАНИЯ ==================== -->
 <section class="card">
 <h2>📋 Требования</h2>
 <div class="platform-grid">
@@ -228,6 +317,8 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 ГБ</span><span class="platform-link">На целевом томе</span></div>
 </div>
 </section>
+
+<!-- ==================== БЛОК: СТРУКТУРА ==================== -->
 <section class="card">
 <h2>📂 Структура установки</h2>
 <div class="tree">/volume1/docker/simplex/          # Базовая директория (выбирается при установке)
@@ -259,7 +350,9 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 ├── .htaccess                     # Авторизация для qrsmp.html
 └── .htpasswd                     # Логин:хэш пароля</div>
 </section>
-<section class="card">
+
+<!-- ==================== БЛОК: УПРАВЛЕНИЕ ==================== -->
+<section class="card" id="manage-ru">
 <h2>🔧 Управление серверами</h2>
 <pre><code># Перейти в папку
 cd /volume1/docker/simplex
@@ -291,6 +384,8 @@ docker compose pull && docker compose up -d
 # Резервное копирование
 /volume1/docker/simplex/simplex-backup.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 </section>
+
+<!-- ==================== БЛОК: ВОССТАНОВЛЕНИЕ ==================== -->
 <section class="card">
 <h2>💾 Восстановление из бэкапа</h2>
 <p>Каждый день в 03:00 создаётся архив бэкапа (<code>simplex-backup-ГГГГММДД_ЧЧММСС.tar.gz</code>) с конфигурацией, паролями, identity и данными SMP/XFTP. Архивы хранятся 14 дней в <code>backups/</code> внутри базовой директории.</p>
@@ -307,6 +402,8 @@ sudo /bin/bash restore.sh</code><button class="copy-btn" onclick="copyCmd(this)"
 </ol>
 <div class="box warn"><strong>⚠️ При восстановлении с новыми настройками (режим 2)</strong>Не забудьте обновить DNS A-записи, проброс портов на роутере и правила Брандмауэра DSM под новый домен/IP, а также перенастроить корневую папку Web Station на новую веб-директорию.</div>
 </section>
+
+<!-- ==================== БЛОК: АЛЬТЕРНАТИВНЫЕ СПОСОБЫ ==================== -->
 <section class="card">
 <h2>🔄 Альтернативные способы установки</h2>
 <pre><code># Если curl недоступен
@@ -320,6 +417,7 @@ chmod +x install.sh
 # Локальный файл
 /bin/bash /volume1/public/install.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 </section>
+
 <footer>
 <p>SimpleX Chat Server Installer · Synology DSM 7.1+ · v9.5</p>
 <p style="margin-top:.5rem;font-size:.75rem;">Скрипт: <code>https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh</code></p>
@@ -327,7 +425,7 @@ chmod +x install.sh
 </footer>
 </div>
 
-<!-- ==================== ENGLISH VERSION ==================== -->
+<!-- ==================== АНГЛИЙСКАЯ ВЕРСИЯ ==================== -->
 <div class="only-en">
 <header>
 <span class="badge">Synology DSM 7.1+</span>
@@ -336,7 +434,68 @@ chmod +x install.sh
 <div class="features"><span class="feat">✅ Zero-Config</span><span class="feat">🔒 Self-Signed TLS</span><span class="feat">🐳 Docker Ready</span><span class="feat">⚡ One-Line Install</span><span class="feat">📊 Live Status</span><span class="feat">🌐 RU / EN</span></div>
 </header>
 
-<section class="card">
+<!-- ==================== БЛОК: О SIMPLEX (EN) ==================== -->
+<section class="card" id="about-en">
+<h2>💜 What is SimpleX?</h2>
+<p><strong>SimpleX</strong> is the first messenger that does not require user identifiers: no phone numbers, nicknames, or public keys tied to identity. Instead, each user receives unique disposable addresses for each connection.</p>
+
+<div class="platform-grid" style="margin-top:1.5rem;">
+<div class="platform-card" style="cursor:default;">
+<span class="platform-icon">🔐</span>
+<span class="platform-name">Full Privacy</span>
+<span class="platform-link">No metadata</span>
+</div>
+<div class="platform-card" style="cursor:default;">
+<span class="platform-icon">🌍</span>
+<span class="platform-name">Decentralized</span>
+<span class="platform-link">Your server, your rules</span>
+</div>
+<div class="platform-card" style="cursor:default;">
+<span class="platform-icon">🔄</span>
+<span class="platform-name">Quantum-Resistant</span>
+<span class="platform-link">Double encryption</span>
+</div>
+<div class="platform-card" style="cursor:default;">
+<span class="platform-icon">📱</span>
+<span class="platform-name">Cross-Platform</span>
+<span class="platform-link">iOS, Android, Desktop</span>
+</div>
+</div>
+
+<h3>🚀 Philosophy & Benefits</h3>
+<div class="box info"><strong>💡 Why is SimpleX unique?</strong>
+<ul>
+<li><strong>No global identification</strong> — you are not tied to a phone number or email. Your profile exists only with your contacts.</li>
+<li><strong>Disposable addresses</strong> — each new contact receives a unique address. Stop communicating — the address is deleted, the connection cannot be restored.</li>
+<li><strong>Spam protection</strong> — since each address is unique and used only for one contact, spam is technically impossible.</li>
+<li><strong>You control the server</strong> — by running your own SMP, XFTP, and TURN server, you have full control over your infrastructure. No one sees who is talking to whom.</li>
+<li><strong>Quantum-resistant encryption</strong> — SimpleX uses double encryption with a post-quantum algorithm, protecting your conversations even from future quantum computers.</li>
+<li><strong>Open source</strong> — all code is available on GitHub, allowing anyone to independently verify its security.</li>
+</ul></div>
+
+<div class="box note"><strong>📌 Important to understand</strong><br>
+SimpleX is not another messenger with an "incognito mode". This is a fundamentally different architecture where the absence of identifiers is built into the core. You communicate not with a "user", but with a specific address that exists exactly as long as needed.</div>
+
+<!-- ИТОГ — тёмный текст -->
+<div class="box success" style="color:var(--text);"><strong>✅ Bottom line</strong><br>
+By running your own SimpleX server, you get a completely private means of communication where no one, including you as the administrator, can see users' conversations (they are end-to-end encrypted), and metadata (who is talking to whom) is not available to outside observers.</div>
+</section>
+
+<!-- ==================== БЛОК: ПРАВОВАЯ ИНФОРМАЦИЯ (EN) ==================== -->
+<section class="card" id="legal-en">
+<h2>⚠️ Legal information</h2>
+<div class="box warn"><strong>⚠️ Purpose of the script</strong>This script and related materials are intended solely for deploying the SimpleX Chat messenger on the owner's own hardware for personal and family use. The script is not intended for creating public services available to an unlimited circle of persons.</div>
+<div class="box info"><strong>📋 User responsibility</strong><ul>
+<li>Using the script to provide a service to an unlimited circle of persons may entail the obligation to register as an information dissemination organizer (ORI) in accordance with Art. 10.1 of Federal Law No. 149-FZ.</li>
+<li>Processing of users' personal data is regulated by Federal Law No. 152-FZ “On Personal Data”.</li>
+<li>The server owner is solely responsible for compliance with applicable law, security configuration, backup and data protection.</li>
+<li>The author of the script is not liable for any consequences of use, including failures, data loss or claims of third parties.</li>
+</ul></div>
+<div class="box note"><strong>💡 Recommendation</strong>Before deploying the server for use beyond family or close acquaintances, it is recommended to consult a qualified lawyer specializing in information law. Do not publish server addresses (SMP, XFTP, TURN) and QR codes in public access.</div>
+</section>
+
+<!-- ==================== БЛОК: УСТАНОВКА КЛИЕНТА (EN) ==================== -->
+<section class="card" id="install-en">
 <h2>📱 Install SimpleX Chat on your smartphone</h2>
 <p>To use your private server, install the SimpleX Chat client app. Choose your device platform:</p>
 <div class="platform-grid">
@@ -361,24 +520,20 @@ chmod +x install.sh
 <li>Add your first contact: tap <strong>+</strong> → <strong>Invite a friend</strong> → scan your contact's QR code.</li>
 </ol>
 </section>
-<section class="card">
-<h2>⚠️ Legal information</h2>
-<div class="box warn"><strong>⚠️ Purpose of the script</strong>This script and related materials are intended solely for deploying the SimpleX Chat messenger on the owner's own hardware for personal and family use. The script is not intended for creating public services available to an unlimited circle of persons.</div>
-<div class="box info"><strong>📋 User responsibility</strong><ul>
-<li>Using the script to provide a service to an unlimited circle of persons may entail the obligation to register as an information dissemination organizer (ORI) in accordance with Art. 10.1 of Federal Law No. 149-FZ.</li>
-<li>Processing of users' personal data is regulated by Federal Law No. 152-FZ “On Personal Data”.</li>
-<li>The server owner is solely responsible for compliance with applicable law, security configuration, backup and data protection.</li>
-<li>The author of the script is not liable for any consequences of use, including failures, data loss or claims of third parties.</li>
-</ul></div>
-<div class="box note"><strong>💡 Recommendation</strong>Before deploying the server for use beyond family or close acquaintances, it is recommended to consult a qualified lawyer specializing in information law. Do not publish server addresses (SMP, XFTP, TURN) and QR codes in public access.</div>
-</section>
-<section class="card">
+
+<!-- ==================== БЛОК: ИНСТРУКЦИЯ ПО УСТАНОВКЕ (EN) ==================== -->
+<section class="card" id="guide-en">
 <h2>🖥️ Detailed server installation guide</h2>
 <h3><span class="step-num">1</span> NAS preparation</h3>
 <h4>1.1 Install Docker</h4>
-<ol><li>Open <strong>Package Center</strong> in DSM.</li><li>Search for <code>Docker</code> (for DSM 7.2+) or <code>Container Manager</code> (for DSM 7.1).</li><li>Click <strong>Install</strong> and wait for completion.</li><li>After installation, open Docker/Container Manager at least once to complete initialization.</li></ol>
+<ol><li>Open <strong>Package Center</strong> in DSM.</li><li>Search for <code>Docker</code> (for DSM 7.2+) or <code>Container Manager</code> (for DSM 7.1).</li>
+<li>Click <strong>Install</strong> and wait for completion.</li>
+<li>After installation, open Docker/Container Manager at least once to complete initialization.</li></ol>
 <h4>1.2 Enable SSH</h4>
-<ol><li>Open <strong>Control Panel → Terminal &amp; SNMP → Terminal</strong>.</li><li>Check <strong>“Enable SSH service”</strong>.</li><li>Port: <code>22</code> (or change to a non-standard one for security).</li><li>Click <strong>Apply</strong>.</li></ol>
+<ol><li>Open <strong>Control Panel → Terminal &amp; SNMP → Terminal</strong>.</li>
+<li>Check <strong>“Enable SSH service”</strong>.</li>
+<li>Port: <code>22</code> (or change to a non-standard one for security).</li>
+<li>Click <strong>Apply</strong>.</li></ol>
 <h4>1.3 Check free space</h4>
 <pre><code>df -h /volume1</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
 <p>Make sure at least <strong>5 GB</strong> is available on the target volume.</p>
@@ -411,7 +566,11 @@ dig +short info.smp.your-domain.com</code><button class="copy-btn" onclick="copy
 </table>
 <div class="box note"><strong>💡 Note:</strong> The range <code>49152–65535 UDP</code> is required only for audio and video calls. If calls are not planned, ports 3478 and 5349 are sufficient.</div>
 <h3><span class="step-num">4</span> DSM Firewall configuration</h3>
-<ol><li>Open <strong>Control Panel → Security → Firewall</strong>.</li><li>Click <strong>Edit Rules</strong> in the active profile.</li><li>Add <strong>Allow</strong> rules for each port from the table above.</li><li>Make sure the rule is above the “Deny all” rule (if any).</li><li>Click <strong>OK → Apply</strong>.</li></ol>
+<ol><li>Open <strong>Control Panel → Security → Firewall</strong>.</li>
+<li>Click <strong>Edit Rules</strong> in the active profile.</li>
+<li>Add <strong>Allow</strong> rules for each port from the table above.</li>
+<li>Make sure the rule is above the “Deny all” rule (if any).</li>
+<li>Click <strong>OK → Apply</strong>.</li></ol>
 <div class="box warn"><strong>⚠️ Important:</strong> After applying firewall rules, make sure you have not lost access to DSM. Always keep a second browser window with DSM open to roll back changes.</div>
 <h3><span class="step-num">5</span> Run installation</h3>
 <ol>
@@ -434,7 +593,8 @@ dig +short info.smp.your-domain.com</code><button class="copy-btn" onclick="copy
 <pre><code>cat /volume1/docker/simplex/CONNECTION_DETAILS.txt</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
 <div class="box warn"><strong>⚠️ Do not share this file with anyone!</strong> It contains all the secrets of your server.</div>
 <h4>6.2 Web Station configuration</h4>
-<ol><li>Open <strong>DSM → Web Station → Web Service Portal</strong>.</li><li>Click <strong>Create</strong>.</li>
+<ol><li>Open <strong>DSM → Web Station → Web Service Portal</strong>.</li>
+<li>Click <strong>Create</strong>.</li>
 <li>Fill in the parameters:<ul>
 <li><strong>Description:</strong> <code>SimpleX Control Panel</code></li>
 <li><strong>Root folder:</strong> <code>/volume1/web/simplex</code> (the volume you selected during installation in step 5)</li>
@@ -464,7 +624,9 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <li><strong>First contact:</strong> tap <strong>+</strong> in the chat list → <strong>Invite a friend</strong> → scan your contact's QR code or send them an invitation link.</li></ol>
 <div class="box info" style="margin-top:1.5rem;text-align:center"><strong>✅ Done!</strong> The server is fully deployed and ready to use.</div>
 </section>
-<section class="card">
+
+<!-- ==================== ОСТАЛЬНЫЕ БЛОКИ (EN) ==================== -->
+<section class="card" id="what-en">
 <h2>📦 What gets installed</h2>
 <div class="platform-grid">
 <div class="platform-card" style="cursor:default"><span class="platform-icon">💬</span><span class="platform-name">SMP Server v6.5.2</span><span class="platform-link">Messages · 5223/5224</span></div>
@@ -473,6 +635,7 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <div class="platform-card" style="cursor:default"><span class="platform-icon">📊</span><span class="platform-name">Monitoring</span><span class="platform-link">Status · JSON</span></div>
 </div>
 </section>
+
 <section class="card">
 <h2>📋 Requirements</h2>
 <div class="platform-grid">
@@ -482,6 +645,7 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 <div class="platform-card" style="cursor:default"><span class="platform-icon">💾</span><span class="platform-name">5 GB</span><span class="platform-link">On the target volume</span></div>
 </div>
 </section>
+
 <section class="card">
 <h2>📂 Installation structure</h2>
 <div class="tree">/volume1/docker/simplex/          # Base directory (selected during installation)
@@ -513,7 +677,8 @@ docker logs simplex-turn</code><button class="copy-btn" onclick="copyCmd(this)">
 ├── .htaccess                     # Authorization for qrsmp.html
 └── .htpasswd                     # Login:password hash</div>
 </section>
-<section class="card">
+
+<section class="card" id="manage-en">
 <h2>🔧 Server management</h2>
 <pre><code># Go to the folder
 cd /volume1/docker/simplex
@@ -545,6 +710,7 @@ docker compose pull && docker compose up -d
 # Backup
 /volume1/docker/simplex/simplex-backup.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
 </section>
+
 <section class="card">
 <h2>💾 Restoring from a backup</h2>
 <p>Every day at 03:00 a backup archive (<code>simplex-backup-YYYYMMDD_HHMMSS.tar.gz</code>) is created with the configuration, passwords, and SMP/XFTP identity and data. Archives are kept for 14 days in <code>backups/</code> inside the base directory.</p>
@@ -561,6 +727,7 @@ sudo /bin/bash restore.sh</code><button class="copy-btn" onclick="copyCmd(this)"
 </ol>
 <div class="box warn"><strong>⚠️ When restoring with new settings (mode 2)</strong>Don't forget to update DNS A records, router port forwarding, and DSM Firewall rules for the new domain/IP, and reconfigure the Web Station root folder to point to the new web directory.</div>
 </section>
+
 <section class="card">
 <h2>🔄 Alternative installation methods</h2>
 <pre><code># If curl is not available
@@ -574,6 +741,7 @@ chmod +x install.sh
 # Local file
 /bin/bash /volume1/public/install.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
 </section>
+
 <footer>
 <p>SimpleX Chat Server Installer · Synology DSM 7.1+ · v9.5</p>
 <p style="margin-top:.5rem;font-size:.75rem;">Script: <code>https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh</code></p>
