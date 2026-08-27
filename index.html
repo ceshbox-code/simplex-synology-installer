@@ -327,6 +327,22 @@ docker compose pull && docker compose up -d
 /volume1/docker/simplex/simplex-backup.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
 </section>
 <section class="card">
+<h2>💾 Восстановление из бэкапа</h2>
+<p>Каждый день в 03:00 создаётся архив бэкапа (<code>simplex-backup-ГГГГММДД_ЧЧММСС.tar.gz</code>) с конфигурацией, паролями, identity и данными SMP/XFTP. Архивы хранятся 14 дней в <code>backups/</code> внутри базовой директории.</p>
+<p>Для восстановления скачайте и запустите <code>restore.sh</code> на NAS (от имени root):</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/restore.sh -o restore.sh
+chmod +x restore.sh
+sudo /bin/bash restore.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Копировать</button></pre>
+<p>Скрипт работает пошагово:</p>
+<ol>
+<li><strong>Выбор архива</strong> — сканирует все тома и показывает пронумерованный список найденных бэкапов с датой и размером.</li>
+<li><strong>Проверка целостности</strong> — проверяет архив (<code>gzip</code>/<code>tar</code>), построчно выводит список файлов внутри и отдельно проверяет алгоритм ключа транспорта SMP (должен быть Ed25519) — это позволяет отловить повреждённые сертификаты ещё до восстановления.</li>
+<li><strong>Режим восстановления</strong> — на выбор: (1) с исходными настройками (тот же том, домен, IP) или (2) с новыми настройками, где скрипт заново предложит выбрать том для данных и веб-файлов, внешний IP и домен — как в основном установщике.</li>
+<li><strong>Запуск</strong> — распаковывает архив, при необходимости перевыпускает сертификат SMP и поднимает контейнеры, выводя итоговый отчёт с адресами подключения.</li>
+</ol>
+<div class="box warn"><strong>⚠️ При восстановлении с новыми настройками (режим 2)</strong>Не забудьте обновить DNS A-записи, проброс портов на роутере и правила Брандмауэра DSM под новый домен/IP, а также перенастроить корневую папку Web Station на новую веб-директорию.</div>
+</section>
+<section class="card">
 <h2>🔄 Альтернативные способы установки</h2>
 <pre><code># Если curl недоступен
 wget -O- https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/install.sh | /bin/bash
@@ -599,6 +615,22 @@ docker compose pull && docker compose up -d
 
 # Backup
 /volume1/docker/simplex/simplex-backup.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
+</section>
+<section class="card">
+<h2>💾 Restoring from a backup</h2>
+<p>Every day at 03:00 a backup archive (<code>simplex-backup-YYYYMMDD_HHMMSS.tar.gz</code>) is created with the configuration, passwords, and SMP/XFTP identity and data. Archives are kept for 14 days in <code>backups/</code> inside the base directory.</p>
+<p>To restore, download and run <code>restore.sh</code> on the NAS (as root):</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/restore.sh -o restore.sh
+chmod +x restore.sh
+sudo /bin/bash restore.sh</code><button class="copy-btn" onclick="copyCmd(this)">📋 Copy</button></pre>
+<p>The script proceeds step by step:</p>
+<ol>
+<li><strong>Archive selection</strong> — scans all volumes and shows a numbered list of found backups with date and size.</li>
+<li><strong>Integrity check</strong> — verifies the archive (<code>gzip</code>/<code>tar</code>), lists its contents, and separately checks the SMP transport key algorithm (must be Ed25519) — catching corrupted certificates before restoring.</li>
+<li><strong>Restore mode</strong> — choose between (1) original settings (same volume, domain, IP) or (2) new settings, where the script prompts again for the data/web volumes, external IP, and domain — just like the main installer.</li>
+<li><strong>Startup</strong> — extracts the archive, reissues the SMP certificate if needed, and starts the containers, printing a final report with connection addresses.</li>
+</ol>
+<div class="box warn"><strong>⚠️ When restoring with new settings (mode 2)</strong>Don't forget to update DNS A records, router port forwarding, and DSM Firewall rules for the new domain/IP, and reconfigure the Web Station root folder to point to the new web directory.</div>
 </section>
 <section class="card">
 <h2>🔄 Alternative installation methods</h2>
