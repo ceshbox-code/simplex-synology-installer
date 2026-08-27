@@ -20,3 +20,6 @@ backups/
 Thumbs.db
 *.swp
 *.bak
+
+deploy-to-github.sh
+*.sh

@@ -570,6 +570,8 @@ else
     warn "Существующий сертификат SMP сохранён." "Existing SMP certificate preserved."
 fi
 
+cp "$BASE_DIR/smp/certificates/$SMP_DOMAIN.crt" "$BASE_DIR/smp/config/server.crt"
+cp "$BASE_DIR/smp/certificates/$SMP_DOMAIN.key" "$BASE_DIR/smp/config/server.key"
 chown 1000:1000 "$BASE_DIR/smp/config/server."* "$BASE_DIR/smp/certificates/"*
 success "TLS сертификаты SMP готовы." "SMP TLS certificates ready."
 
