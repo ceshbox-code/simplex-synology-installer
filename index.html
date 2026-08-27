@@ -83,41 +83,6 @@ footer{text-align:center;padding:2rem 0 1rem;color:var(--muted);font-size:.8rem;
 </header>
 
 <section class="card">
-<h2>🚀 Генератор команды установки</h2>
-<p>Заполните поля, чтобы получить готовую команду для SSH. Переменные окружения позволят пропустить часть вопросов при установке.</p>
-<div style="display:flex;flex-direction:column;gap:12px;margin:1rem 0">
-  <div>
-    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">🌐 Доменное имя *</label>
-    <input type="text" id="gen-domain-ru" placeholder="example.ru" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
-  </div>
-  <div>
-    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">📡 Внешний IP-адрес Вашего сервера (NAS)</label>
-    <div style="display:flex;gap:8px">
-      <input type="text" id="gen-ip-ru" placeholder="12.34.567.89" style="flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
-    </div>
-  </div>
-  <div>
-    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">📧 Email администратора</label>
-    <input type="email" id="gen-email-ru" placeholder="admin@example.ru" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
-  </div>
-  <div>
-    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">🌍 Язык установщика</label>
-    <select id="gen-lang-ru" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
-      <option value="1">Русский</option>
-      <option value="2">English</option>
-    </select>
-  </div>
-</div>
-<button onclick="generateCmd('ru')" style="width:100%;padding:14px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer">⚡ Сгенерировать команду</button>
-<div id="gen-result-ru" style="display:none;margin-top:1.25rem">
-  <h3>Готовая команда</h3>
-  <p style="font-size:.85rem;margin-bottom:.5rem">Скопируйте и вставьте в SSH-терминал NAS (от имени root):</p>
-  <pre style="position:relative;background:var(--info-bg);border:1px solid var(--line);border-radius:10px;padding:1rem"><code id="gen-cmd-ru" style="display:block;white-space:pre-wrap;word-break:break-all;font-size:.8rem;color:var(--text)"></code><button onclick="copyGen('ru')" style="position:absolute;top:.5rem;right:.5rem;background:var(--purple);color:#fff;border:none;border-radius:6px;padding:.4rem .8rem;font-size:.75rem;font-weight:600;cursor:pointer">📋 Копировать</button></pre>
-  <div class="box note"><strong>💡 Примечание</strong>Скрипт всё равно запросит выбор тома для данных серверов и веб-файлов, так как это зависит от конфигурации вашего NAS.</div>
-</div>
-</section>
-
-<section class="card">
 <h2>📱 Установка SimpleX Chat на смартфон</h2>
 <p>Для работы с вашим приватным сервером необходимо установить клиентское приложение SimpleX Chat. Выберите платформу вашего устройства:</p>
 <div class="platform-grid">
