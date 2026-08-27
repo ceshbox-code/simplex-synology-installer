@@ -337,42 +337,6 @@ chmod +x install.sh
 </header>
 
 <section class="card">
-<h2>🚀 Installation command generator</h2>
-<p>Fill in the fields below to get a ready-to-use SSH command. Environment variables will let you skip some questions during installation.</p>
-<div style="display:flex;flex-direction:column;gap:12px;margin:1rem 0">
-  <div>
-    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">🌐 Domain name *</label>
-    <input type="text" id="gen-domain-en" placeholder="example.com" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
-  </div>
-  <div>
-    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">📡 External IP address</label>
-    <div style="display:flex;gap:8px">
-      <input type="text" id="gen-ip-en" placeholder="92.43.187.36" style="flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
-      <button onclick="detectIP('en')" style="padding:10px 16px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;white-space:nowrap">Auto</button>
-    </div>
-  </div>
-  <div>
-    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">📧 Admin email</label>
-    <input type="email" id="gen-email-en" placeholder="admin@example.com" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
-  </div>
-  <div>
-    <label style="display:block;font-weight:600;margin-bottom:4px;font-size:.9rem">🌍 Installer language</label>
-    <select id="gen-lang-en" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--info-bg);color:var(--text);font-size:.9rem">
-      <option value="1">Russian</option>
-      <option value="2">English</option>
-    </select>
-  </div>
-</div>
-<button onclick="generateCmd('en')" style="width:100%;padding:14px;background:var(--purple);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer">⚡ Generate command</button>
-<div id="gen-result-en" style="display:none;margin-top:1.25rem">
-  <h3>Ready command</h3>
-  <p style="font-size:.85rem;margin-bottom:.5rem">Copy and paste into your NAS SSH terminal (as root):</p>
-  <pre style="position:relative;background:var(--info-bg);border:1px solid var(--line);border-radius:10px;padding:1rem"><code id="gen-cmd-en" style="display:block;white-space:pre-wrap;word-break:break-all;font-size:.8rem;color:var(--text)"></code><button onclick="copyGen('en')" style="position:absolute;top:.5rem;right:.5rem;background:var(--purple);color:#fff;border:none;border-radius:6px;padding:.4rem .8rem;font-size:.75rem;font-weight:600;cursor:pointer">📋 Copy</button></pre>
-  <div class="box note"><strong>💡 Note</strong>The script will still ask for the volume selection for server data and web files, as this depends on your NAS configuration.</div>
-</div>
-</section>
-
-<section class="card">
 <h2>📱 Install SimpleX Chat on your smartphone</h2>
 <p>To use your private server, install the SimpleX Chat client app. Choose your device platform:</p>
 <div class="platform-grid">
