@@ -615,6 +615,254 @@ EOF
 chmod 600 "$NEW_BASE_DIR/CONNECTION_DETAILS.txt"
 
 # ==============================================================================
+# 9b. ВОССТАНОВЛЕНИЕ / ПЕРЕСОЗДАНИЕ WEB-ПАНЕЛИ
+# ==============================================================================
+info "Восстановление веб-панели..." "Restoring web panel..."
+
+NEW_WEB_DIR="${NEW_WEB_DIR%/}"
+[ -z "$NEW_WEB_DIR" ] && NEW_WEB_DIR="/volume1/web/simplex"
+
+if [ -n "${OLD_WEB_DIR:-}" ]; then
+  OLD_WEB_DIR="${OLD_WEB_DIR%/}"
+fi
+
+js_escape() {
+  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+}
+
+write_connection_js() {
+  local details="$1"
+  local out="$2"
+
+  local smp xftp stun turn turns
+
+  smp=$(grep '^SMP:' "$details" 2>/dev/null | head -n1 | sed 's/^SMP:[[:space:]]*//; s/\r$//' || true)
+  xftp=$(grep '^XFTP:' "$details" 2>/dev/null | head -n1 | sed 's/^XFTP:[[:space:]]*//; s/\r$//' || true)
+  stun=$(grep '^stun:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
+  turn=$(grep '^turn:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
+  turns=$(grep '^turns:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
+
+  cat > "$out" <<EOF
+window.SIMPLEX_CONN = {
+  "smp": "$(js_escape "$smp")",
+  "xftp": "$(js_escape "$xftp")",
+  "stun": "$(js_escape "$stun")",
+  "turn_udp": "$(js_escape "$turn")",
+  "turn_tls": "$(js_escape "$turns")",
+  "updated": "$(date '+%Y-%m-%d %H:%M:%S')"
+};
+EOF
+
+  chmod 644 "$out"
+}
+
+create_dynamic_qrsmp() {
+  local out="$1"
+
+  cat > "$out" <<'WEBEOF'
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimpleX Control</title>
+<script src="connection.js"></script>
+<style>
+body{font-family:Arial,sans-serif;background:#0c0a14;color:#f5f3fa;margin:20px}
+h1{margin-bottom:20px}
+.card{background:#1a1528;border:1px solid rgba(139,92,246,.12);border-radius:16px;padding:18px;margin-bottom:14px}
+pre{white-space:pre-wrap;word-break:break-all;background:#0c0a14;border:1px solid rgba(139,92,246,.12);padding:10px;border-radius:10px}
+button{padding:8px 12px;border-radius:8px;border:0;background:#8B5CF6;color:#fff;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>SimpleX Control</h1>
+
+<div class="card">
+  <h2>SMP</h2>
+  <pre id="smp"></pre>
+  <button onclick="copyText('smp')">Copy</button>
+</div>
+
+<div class="card">
+  <h2>XFTP</h2>
+  <pre id="xftp"></pre>
+  <button onclick="copyText('xftp')">Copy</button>
+</div>
+
+<div class="card">
+  <h2>TURN / STUN</h2>
+  <pre id="turn"></pre>
+  <button onclick="copyText('turn')">Copy</button>
+</div>
+
+<script>
+function connValue(k) {
+  return (window.SIMPLEX_CONN && window.SIMPLEX_CONN[k]) || "";
+}
+
+function turnText() {
+  return [connValue('stun'), connValue('turn_udp'), connValue('turn_tls')]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function render() {
+  document.getElementById('smp').textContent = connValue('smp') || '—';
+  document.getElementById('xftp').textContent = connValue('xftp') || '—';
+  document.getElementById('turn').textContent = turnText() || '—';
+}
+
+function copyText(id) {
+  var text = id === 'turn' ? turnText() : connValue(id);
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text);
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', render);
+</script>
+</body>
+</html>
+WEBEOF
+
+  chmod 644 "$out"
+}
+
+mkdir -p "$NEW_WEB_DIR"
+
+if [ -d "$NEW_WEB_DIR" ] && [ "$(ls -A "$NEW_WEB_DIR" 2>/dev/null)" ]; then
+  warn "Директория $NEW_WEB_DIR не пуста — веб-файлы будут перезаписаны/дополнены." \
+       "Directory $NEW_WEB_DIR is not empty — web files will be overwritten/merged."
+fi
+
+# --- Восстановление веб-папки из архива, если она там есть -------------------
+if [ -d "$NEW_BASE_DIR/web" ]; then
+  WEB_SRC_DIR=$(find "$NEW_BASE_DIR/web" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1)
+
+  if [ -n "$WEB_SRC_DIR" ]; then
+    cp -a "$WEB_SRC_DIR/." "$NEW_WEB_DIR/"
+  else
+    cp -a "$NEW_BASE_DIR/web/." "$NEW_WEB_DIR/"
+  fi
+
+  rm -rf "$NEW_BASE_DIR/web"
+
+  success "Web-файлы восстановлены из архива в $NEW_WEB_DIR" \
+          "Web files restored from archive to $NEW_WEB_DIR"
+else
+  warn "Web-файлы в архиве не найдены — создаётся минимальная веб-панель." \
+       "No web files found in archive — creating minimal web panel."
+fi
+
+# --- Если веб-файлов нет, создаём минимальные динамические страницы ----------
+if [ ! -s "$NEW_WEB_DIR/qrsmp.html" ]; then
+  create_dynamic_qrsmp "$NEW_WEB_DIR/qrsmp.html"
+  success "Создан динамический qrsmp.html." "Dynamic qrsmp.html created."
+fi
+
+if [ ! -s "$NEW_WEB_DIR/index.html" ]; then
+  cat > "$NEW_WEB_DIR/index.html" <<'WEBEOF'
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="0; url=qrsmp.html">
+<title>SimpleX Server</title>
+</head>
+<body>
+<a href="qrsmp.html">SimpleX Control</a>
+</body>
+</html>
+WEBEOF
+
+  chmod 644 "$NEW_WEB_DIR/index.html"
+fi
+
+# --- Всегда пересоздаём connection.js из актуального CONNECTION_DETAILS.txt ---
+write_connection_js "$NEW_BASE_DIR/CONNECTION_DETAILS.txt" "$NEW_WEB_DIR/connection.js"
+
+success "connection.js сгенерирован из CONNECTION_DETAILS.txt." \
+        "connection.js generated from CONNECTION_DETAILS.txt."
+
+# --- Если WEB_DIR изменился, чиним пути в .htaccess ---------------------------
+if [ -f "$NEW_WEB_DIR/.htaccess" ] && [ -n "${OLD_WEB_DIR:-}" ] && [ "$OLD_WEB_DIR" != "$NEW_WEB_DIR" ]; then
+  SAFE_OLD_WEB_DIR=$(printf '%s' "$OLD_WEB_DIR" | sed 's/[|&]/\\&/g')
+  SAFE_NEW_WEB_DIR=$(printf '%s' "$NEW_WEB_DIR" | sed 's/[|&]/\\&/g')
+
+  sed -i "s|$SAFE_OLD_WEB_DIR|$SAFE_NEW_WEB_DIR|g" "$NEW_WEB_DIR/.htaccess" 2>/dev/null || true
+
+  success "Пути в .htaccess обновлены под $NEW_WEB_DIR" \
+          "Paths in .htaccess updated to $NEW_WEB_DIR"
+fi
+
+# --- Если есть .htpasswd, защищаем .htaccess и connection.js ------------------
+if [ -f "$NEW_WEB_DIR/.htpasswd" ]; then
+  if [ ! -f "$NEW_WEB_DIR/.htaccess" ]; then
+    cat > "$NEW_WEB_DIR/.htaccess" <<EOF
+<Files "qrsmp.html">
+AuthType Basic
+AuthName "SimpleX Control"
+AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+Require valid-user
+</Files>
+
+<Files "status.json">
+AuthType Basic
+AuthName "SimpleX Control"
+AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+Require valid-user
+</Files>
+
+<Files "connection.js">
+AuthType Basic
+AuthName "SimpleX Control"
+AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+Require valid-user
+</Files>
+EOF
+
+    chmod 644 "$NEW_WEB_DIR/.htaccess"
+  fi
+
+  if ! grep -q '<Files "connection.js">' "$NEW_WEB_DIR/.htaccess" 2>/dev/null; then
+    cat >> "$NEW_WEB_DIR/.htaccess" <<EOF
+
+<Files "connection.js">
+AuthType Basic
+AuthName "SimpleX Control"
+AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+Require valid-user
+</Files>
+EOF
+
+    chmod 644 "$NEW_WEB_DIR/.htaccess"
+  fi
+else
+  if [ -f "$NEW_WEB_DIR/.htaccess" ]; then
+    warn ".htpasswd отсутствует рядом с .htaccess — проверьте защиту веб-панели вручную." \
+         ".htpasswd is missing next to .htaccess — check web panel protection manually."
+  fi
+fi
+
+# --- Права на базовые веб-файлы -----------------------------------------------
+chmod 644 "$NEW_WEB_DIR/qrsmp.html" "$NEW_WEB_DIR/index.html" "$NEW_WEB_DIR/connection.js" 2>/dev/null || true
+
+# --- Предупреждение для старых qrsmp.html -------------------------------------
+if [ -s "$NEW_WEB_DIR/qrsmp.html" ] && ! grep -q "connection.js" "$NEW_WEB_DIR/qrsmp.html" 2>/dev/null; then
+  warn "Восстановленный qrsmp.html не использует connection.js. Для динамических адресов замените его обновлённой версией." \
+       "Restored qrsmp.html does not use connection.js. Replace it with the updated version for dynamic addresses."
+fi
+
+# ==============================================================================
 # 10. ИТОГ
 # ==============================================================================
 echo ""
