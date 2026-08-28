@@ -814,6 +814,21 @@ chmod 700 "$BACKUP_SCRIPT"
 success "Backup-скрипт создан." "Backup script created."
 
 # ==============================================================================
+# 10b. ЗАГРУЗКА RESTORE.SH
+# ==============================================================================
+info "Загрузка restore.sh..." "Downloading restore.sh..."
+RESTORE_SCRIPT="$BASE_DIR/restore.sh"
+if curl -fsSL --max-time 20 \
+    "https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/restore.sh" \
+    -o "$RESTORE_SCRIPT" 2>/dev/null; then
+    chmod 700 "$RESTORE_SCRIPT"
+    success "restore.sh загружен в $RESTORE_SCRIPT" "restore.sh downloaded to $RESTORE_SCRIPT"
+else
+    warn "Не удалось загрузить restore.sh. Скачайте вручную: curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/restore.sh -o $RESTORE_SCRIPT" \
+         "Failed to download restore.sh. Download manually: curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/restore.sh -o $RESTORE_SCRIPT"
+fi
+
+# ==============================================================================
 # 11. STATUS-UPDATE.SH + CRON
 # ==============================================================================
 info "Создание скрипта обновления статуса..." "Creating status update script..."
@@ -947,6 +962,17 @@ docker logs simplex-smp
 docker logs simplex-xftp
 docker logs simplex-turn
 docker compose pull && docker compose up -d</div>
+</div>
+<div class="card">
+<div class="ct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>Резервное копирование и восстановление</div>
+<p style="color:var(--muted);font-size:12px;margin-bottom:10px;line-height:1.6">Бэкап создаётся автоматически каждый день в 03:00 (хранится 14 дней) в <code style="background:var(--input-bg);padding:2px 5px;border-radius:5px;color:var(--code-text)">${BASE_DIR}/backups/</code>. Для восстановления используйте <code style="background:var(--input-bg);padding:2px 5px;border-radius:5px;color:var(--code-text)">restore.sh</code>, уже загруженный на сервер:</p>
+<div class="code-block">cd ${BASE_DIR}
+sudo /bin/bash restore.sh</div>
+<p style="color:var(--muted);font-size:11px;margin:8px 0">Если файла нет или нужна свежая версия:</p>
+<div class="code-block">curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/restore.sh -o ${BASE_DIR}/restore.sh
+chmod +x ${BASE_DIR}/restore.sh
+cd ${BASE_DIR} && sudo /bin/bash restore.sh</div>
+<a href="https://ceshbox-code.github.io/simplex-synology-installer/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;color:var(--purple-light);font-size:12px;font-weight:700;text-decoration:none">📖 Подробная инструкция по восстановлению →</a>
 </div>
 <div class="sec">
 <div class="sec-t">⚠️ Безопасность</div>
@@ -1155,6 +1181,7 @@ RESULT_FILE="$BASE_DIR/CONNECTION_DETAILS.txt"
     echo "Конфигурация / Config: $BASE_DIR/.env"
     echo "Веб-страницы / Web pages: $WEB_DIR/"
     echo "Backup: $BACKUP_SCRIPT"
+    echo "Restore: $RESTORE_SCRIPT"
     echo "Статус: $BASE_DIR/status-update.sh"
     echo ""
     echo "⚠️ ДАЛЬНЕЙШИЕ ДЕЙСТВИЯ / NEXT STEPS:"
