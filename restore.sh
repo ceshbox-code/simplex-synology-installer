@@ -1,41 +1,91 @@
 #!/bin/bash
 # ==============================================================================
 # SimpleX Chat Server Suite — Restore from Backup (Synology DSM 7.1+)
-# Версия: 1.0
-# Восстанавливает архив, созданный simplex-backup.sh
+# Версия: 1.1
+# Восстанавливает архив, созданный simplex-backup.sh,
+# а также зашифрованные архивы .tar.gz.enc из /volume*/docker/simp_bkp
 # ==============================================================================
 set -e
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+if [ ! -e /dev/tty ]; then
+    echo "Интерактивное восстановление требует полноценный терминал." >&2
+    echo "Interactive restore requires a full terminal." >&2
+    exit 1
+fi
 
 # === ВЫБОР ЯЗЫКА / LANGUAGE SELECTION ===
 echo ""
 echo "=========================================="
-echo "  SIMPLEX CHAT RESTORE v1.0 — SYNOLOGY"
+echo "  SIMPLEX CHAT RESTORE v1.1 — SYNOLOGY"
 echo "=========================================="
 echo ""
 echo "Выберите язык / Select language:"
 echo "  1) Русский"
 echo "  2) English"
 echo ""
-read -p "Ваш выбор / Your choice [1]: " LANG_CHOICE < /dev/tty
+read -p "Ваш выбор / Your choice [1]: " LANG_CHOICE < /dev/tty || true
 LANG_CHOICE=${LANG_CHOICE:-1}
-if [ "$LANG_CHOICE" = "2" ]; then LANG_EN=true; else LANG_EN=false; fi
 
-info()    { if [ "$LANG_EN" = true ]; then echo -e "${BLUE}[INFO]${NC} $2"; else echo -e "${BLUE}[INFO]${NC} $1"; fi; }
-success() { if [ "$LANG_EN" = true ]; then echo -e "${GREEN}[ OK ]${NC} $2"; else echo -e "${GREEN}[ OK ]${NC} $1"; fi; }
-warn()    { if [ "$LANG_EN" = true ]; then echo -e "${YELLOW}[WARN]${NC} $2"; else echo -e "${YELLOW}[WARN]${NC} $1"; fi; }
-error()   { if [ "$LANG_EN" = true ]; then echo -e "${RED}[ERR ]${NC} $2"; exit 1; else echo -e "${RED}[ERR ]${NC} $1"; exit 1; fi; }
-ok_line() { echo -e "  ${GREEN}[ OK ]${NC} $1"; }
+if [ "$LANG_CHOICE" = "2" ]; then
+    LANG_EN=true
+else
+    LANG_EN=false
+fi
+
+info() {
+    if [ "$LANG_EN" = true ]; then
+        echo -e "${BLUE}[INFO]${NC} $2"
+    else
+        echo -e "${BLUE}[INFO]${NC} $1"
+    fi
+}
+
+success() {
+    if [ "$LANG_EN" = true ]; then
+        echo -e "${GREEN}[ OK ]${NC} $2"
+    else
+        echo -e "${GREEN}[ OK ]${NC} $1"
+    fi
+}
+
+warn() {
+    if [ "$LANG_EN" = true ]; then
+        echo -e "${YELLOW}[WARN]${NC} $2"
+    else
+        echo -e "${YELLOW}[WARN]${NC} $1"
+    fi
+}
+
+error() {
+    if [ "$LANG_EN" = true ]; then
+        echo -e "${RED}[ERR ]${NC} $2"
+        exit 1
+    else
+        echo -e "${RED}[ERR ]${NC} $1"
+        exit 1
+    fi
+}
+
+ok_line() {
+    echo -e "  ${GREEN}[ OK ]${NC} $1"
+}
 
 if [ "$(id -u)" -ne 0 ]; then
     error "Скрипт требует прав суперпользователя. Выполните: sudo /bin/bash $0" \
           "Script requires superuser privileges. Run: sudo /bin/bash $0"
 fi
-command -v tar    &>/dev/null || error "tar не найден." "tar not found."
-command -v docker &>/dev/null || error "Docker не установлен." "Docker not installed."
+
+command -v tar     &>/dev/null || error "tar не найден." "tar not found."
+command -v gzip    &>/dev/null || error "gzip не найден." "gzip not found."
+command -v docker  &>/dev/null || error "Docker не установлен." "Docker not installed."
 command -v openssl &>/dev/null || error "openssl не найден." "openssl not found."
-command -v ip     &>/dev/null || error "ip не найден." "ip not found."
+command -v ip      &>/dev/null || error "ip не найден." "ip not found."
 
 COMPOSE_CMD="docker compose"
 if ! docker compose version &>/dev/null; then
@@ -49,40 +99,62 @@ fi
 info "Поиск архивов резервных копий..." "Searching for backup archives..."
 
 BACKUP_FILES=()
-for v in /volume*; do
-    if [ -d "$v/docker/simplex/backups" ]; then
-        while IFS= read -r -d '' f; do
-            BACKUP_FILES+=("$f")
-        done < <(find "$v/docker/simplex/backups" -maxdepth 1 -name "simplex-backup-*.tar.gz" -print0 2>/dev/null)
-    fi
-done
-# Также проверим текущую директорию на случай локального запуска
-while IFS= read -r -d '' f; do
-    BACKUP_FILES+=("$f")
-done < <(find "$(pwd)" -maxdepth 1 -name "simplex-backup-*.tar.gz" -print0 2>/dev/null)
 
-# Убираем дубликаты, сортируем по дате (новые сверху)
+add_backup_files_from_dir() {
+    local dir="$1"
+    [ -d "$dir" ] || return 0
+
+    while IFS= read -r -d '' f; do
+        BACKUP_FILES+=("$f")
+    done < <(find "$dir" -maxdepth 1 -type f \( \
+        -name "simplex-backup-*.tar.gz" \
+        -o -name "simplex-backup-*.tar.gz.enc" \
+        -o -name "simplex-secure-backup-*.tar.gz.enc" \
+        -o -name "simplex-uninstall-backup-*.tar.gz.enc" \
+        \) -print0 2>/dev/null)
+}
+
+for v in /volume*; do
+    add_backup_files_from_dir "$v/docker/simplex/backups"
+    add_backup_files_from_dir "$v/docker/simp_bkp"
+done
+
+# Также проверим текущую директорию на случай локального запуска
+add_backup_files_from_dir "$(pwd)"
+
 if [ ${#BACKUP_FILES[@]} -eq 0 ]; then
-    error "Архивы резервных копий не найдены (искали в /volume*/docker/simplex/backups)." \
-          "No backup archives found (searched /volume*/docker/simplex/backups)."
+    error "Архивы резервных копий не найдены (искали в /volume*/docker/simplex/backups и /volume*/docker/simp_bkp)." \
+          "No backup archives found (searched /volume*/docker/simplex/backups and /volume*/docker/simp_bkp)."
 fi
 
+# Убираем дубликаты, сортируем по дате (новые сверху)
 mapfile -t BACKUP_FILES < <(printf '%s\n' "${BACKUP_FILES[@]}" | sort -u | sort -r)
 
 echo ""
 info "Найденные архивы:" "Found archives:"
 echo ""
+
 idx=1
 for f in "${BACKUP_FILES[@]}"; do
     SIZE=$(du -h "$f" 2>/dev/null | cut -f1)
     DATE=$(stat -c '%y' "$f" 2>/dev/null | cut -d'.' -f1)
-    printf "  %2d) %s  (%s, %s)\n" "$idx" "$f" "$SIZE" "$DATE"
+
+    case "$f" in
+        *.enc)
+            printf "  %2d) %s  (%s, %s) [ENCRYPTED]\n" "$idx" "$f" "$SIZE" "$DATE"
+            ;;
+        *)
+            printf "  %2d) %s  (%s, %s)\n" "$idx" "$f" "$SIZE" "$DATE"
+            ;;
+    esac
+
     idx=$((idx + 1))
 done
-echo ""
 
+echo ""
 while true; do
-    read -p "$( [ "$LANG_EN" = true ] && echo 'Select archive number: ' || echo 'Выберите номер архива: ' )" ARCH_CHOICE < /dev/tty
+    read -p "$( [ "$LANG_EN" = true ] && echo 'Select archive number: ' || echo 'Выберите номер архива: ' )" ARCH_CHOICE < /dev/tty || true
+
     if [[ "$ARCH_CHOICE" =~ ^[0-9]+$ ]] && [ "$ARCH_CHOICE" -ge 1 ] && [ "$ARCH_CHOICE" -le ${#BACKUP_FILES[@]} ]; then
         SELECTED_ARCHIVE="${BACKUP_FILES[$((ARCH_CHOICE - 1))]}"
         break
@@ -95,20 +167,179 @@ done
 info "Выбран архив: $SELECTED_ARCHIVE" "Selected archive: $SELECTED_ARCHIVE"
 
 # ==============================================================================
+# 1b. ПОДДЕРЖКА ЗАШИФРОВАННЫХ АРХИВОВ
+# ==============================================================================
+IS_ENCRYPTED=false
+case "$SELECTED_ARCHIVE" in
+    *.enc)
+        IS_ENCRYPTED=true
+        ;;
+esac
+
+ARCH_PASS=""
+
+# ==============================================================================
+# OPENSSL DECRYPTION COMPATIBILITY
+# ==============================================================================
+ALL_ENC_MODES=(pbkdf2_salt pbkdf2 sha256_salt sha256 sha1_salt sha1 md5_salt md5)
+ENC_ARGS=()
+ARCH_ENC_MODE=""
+
+set_enc_args() {
+    local mode="$1"
+
+    case "$mode" in
+        pbkdf2_salt) ENC_ARGS=(-pbkdf2 -iter 200000 -salt) ;;
+        pbkdf2)      ENC_ARGS=(-pbkdf2 -iter 200000) ;;
+        sha256_salt) ENC_ARGS=(-md sha256 -salt) ;;
+        sha256)      ENC_ARGS=(-md sha256) ;;
+        sha1_salt)   ENC_ARGS=(-md sha1 -salt) ;;
+        sha1)        ENC_ARGS=(-md sha1) ;;
+        md5_salt)    ENC_ARGS=(-md md5 -salt) ;;
+        md5)         ENC_ARGS=(-md md5) ;;
+        *)           ENC_ARGS=(-md sha1) ;;
+    esac
+}
+
+try_detect_archive_mode_with_pass() {
+    local mode
+    ARCH_ENC_MODE=""
+
+    for mode in "${ALL_ENC_MODES[@]}"; do
+        set_enc_args "$mode"
+
+        if ( set -o pipefail; printf '%s\n' "$ARCH_PASS" | openssl enc -d -aes-256-cbc "${ENC_ARGS[@]}" -in "$SELECTED_ARCHIVE" -pass stdin | tar -t -z -f - ) >/dev/null 2>&1; then
+            ARCH_ENC_MODE="$mode"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+openssl_decrypt_pipe() {
+    local mode="${ARCH_ENC_MODE:-sha1}"
+    set_enc_args "$mode"
+
+    printf '%s\n' "$ARCH_PASS" | openssl enc -d -aes-256-cbc "${ENC_ARGS[@]}" \
+        -in "$SELECTED_ARCHIVE" \
+        -pass stdin
+}
+
+archive_list() {
+    if [ "$IS_ENCRYPTED" = true ]; then
+        (
+            set -o pipefail
+            openssl_decrypt_pipe | tar -t -z -f -
+        )
+    else
+        tar -t -z -f "$SELECTED_ARCHIVE"
+    fi
+}
+
+archive_extract_all() {
+    local dest="$1"
+
+    if [ "$IS_ENCRYPTED" = true ]; then
+        (
+            set -o pipefail
+            openssl_decrypt_pipe | tar -x -z -f - -C "$dest"
+        )
+    else
+        tar -x -z -f "$SELECTED_ARCHIVE" -C "$dest"
+    fi
+}
+
+archive_extract_env() {
+    local dest="$1"
+
+    if [ "$IS_ENCRYPTED" = true ]; then
+        (
+            set -o pipefail
+            openssl_decrypt_pipe | tar -x -z -O -f - .env > "$dest"
+        )
+    else
+        tar -x -z -O -f "$SELECTED_ARCHIVE" .env > "$dest"
+    fi
+}
+
+archive_extract_member_stdout() {
+    local member="$1"
+
+    if [ "$IS_ENCRYPTED" = true ]; then
+        (
+            set -o pipefail
+            openssl_decrypt_pipe | tar -x -z -O -f - "$member"
+        )
+    else
+        tar -x -z -O -f "$SELECTED_ARCHIVE" "$member"
+    fi
+}
+
+if [ "$IS_ENCRYPTED" = true ]; then
+    info "Выбран зашифрованный архив. Требуется пароль." \
+         "Encrypted archive selected. Password required."
+
+    PASS_ATTEMPTS=0
+
+    while true; do
+        echo "" > /dev/tty
+
+        if [ "$LANG_EN" = true ]; then
+            printf 'Archive password: ' > /dev/tty
+        else
+            printf 'Пароль архива: ' > /dev/tty
+        fi
+
+        read -s -r ARCH_PASS < /dev/tty || true
+        echo "" > /dev/tty
+
+        if [ -z "$ARCH_PASS" ]; then
+            warn "Пароль не может быть пустым." "Password cannot be empty."
+            continue
+        fi
+
+        if try_detect_archive_mode_with_pass; then
+            break
+        fi
+
+        PASS_ATTEMPTS=$((PASS_ATTEMPTS + 1))
+        warn "Неверный пароль или архив повреждён." \
+             "Wrong password or corrupted archive."
+
+        if [ "$PASS_ATTEMPTS" -ge 5 ]; then
+            error "Слишком много неудачных попыток ввода пароля." \
+                  "Too many failed password attempts."
+        fi
+
+        ARCH_PASS=""
+    done
+
+    success "Пароль принят. Метод: $ARCH_ENC_MODE" \
+            "Password accepted. Mode: $ARCH_ENC_MODE"
+fi
+
+# ==============================================================================
 # 2. ПРОВЕРКА ЦЕЛОСТНОСТИ АРХИВА
 # ==============================================================================
 echo ""
 info "Проверка целостности архива..." "Checking archive integrity..."
 echo ""
 
-if ! gzip -t "$SELECTED_ARCHIVE" 2>/dev/null; then
-    error "Архив повреждён (ошибка gzip). Восстановление невозможно." \
-          "Archive is corrupted (gzip error). Restore is not possible."
-fi
+if [ "$IS_ENCRYPTED" = true ]; then
+    ARCHIVE_LIST=$(archive_list) || \
+        error "Не удалось прочитать зашифрованный архив." \
+              "Failed to read encrypted archive."
+else
+    if ! gzip -t "$SELECTED_ARCHIVE" 2>/dev/null; then
+        error "Архив повреждён (ошибка gzip). Восстановление невозможно." \
+              "Archive is corrupted (gzip error). Restore is not possible."
+    fi
 
-ARCHIVE_LIST=$(tar -tzf "$SELECTED_ARCHIVE" 2>/dev/null) || \
-    error "Не удалось прочитать содержимое архива (ошибка tar)." \
-          "Failed to read archive contents (tar error)."
+    ARCHIVE_LIST=$(tar -t -z -f "$SELECTED_ARCHIVE" 2>/dev/null) || \
+        error "Не удалось прочитать содержимое архива (ошибка tar)." \
+              "Failed to read archive contents (tar error)."
+fi
 
 if [ -z "$ARCHIVE_LIST" ]; then
     error "Архив пуст." "Archive is empty."
@@ -119,6 +350,7 @@ if [ "$LANG_EN" = true ]; then
 else
     echo "Содержимое архива:"
 fi
+
 echo ""
 while IFS= read -r entry; do
     [ -z "$entry" ] && continue
@@ -129,12 +361,14 @@ echo ""
 # Проверка наличия ключевых файлов
 REQUIRED_ITEMS=(".env" "docker-compose.yml" "smp/config" "xftp/config")
 MISSING=0
+
 for item in "${REQUIRED_ITEMS[@]}"; do
     if ! echo "$ARCHIVE_LIST" | grep -q "^${item}"; then
         warn "В архиве отсутствует: $item" "Missing from archive: $item"
         MISSING=1
     fi
 done
+
 if [ "$MISSING" -eq 1 ]; then
     warn "Некоторые ожидаемые элементы отсутствуют. Продолжайте с осторожностью." \
          "Some expected items are missing. Proceed with caution."
@@ -159,9 +393,11 @@ SERVER_KEY_ALGO=""
 
 if echo "$ARCHIVE_LIST" | grep -q "^smp/config/server\.key$"; then
     SERVER_KEY_CHECK=$(mktemp)
-    if tar -xzOf "$SELECTED_ARCHIVE" smp/config/server.key > "$SERVER_KEY_CHECK" 2>/dev/null; then
-        SERVER_KEY_ALGO=$(openssl pkey -in "$SERVER_KEY_CHECK" -noout -text 2>/dev/null | head -1)
+
+    if archive_extract_member_stdout "smp/config/server.key" > "$SERVER_KEY_CHECK" 2>/dev/null; then
+        SERVER_KEY_ALGO=$(openssl pkey -in "$SERVER_KEY_CHECK" -noout -text 2>/dev/null | head -1 || true)
     fi
+
     rm -f "$SERVER_KEY_CHECK"
 else
     warn "В архиве отсутствует smp/config/server.key — проверку алгоритма пропустить невозможно." \
@@ -177,6 +413,7 @@ elif echo "$SERVER_KEY_ALGO" | grep -qi "ED25519\|ED448"; then
 else
     echo ""
     warn "ОБНАРУЖЕНО НЕСООТВЕТСТВИЕ АЛГОРИТМА КЛЮЧА!" "KEY ALGORITHM MISMATCH DETECTED!"
+
     if [ "$LANG_EN" = true ]; then
         echo "  smp/config/server.key uses: $SERVER_KEY_ALGO"
         echo "  Expected: ED25519 (SMP transport protocol requirement)"
@@ -197,9 +434,12 @@ else
         echo "  падению контейнера SMP в цикле рестартов с ошибкой:"
         echo "    smp-server: user error (unknown key algorithm)"
     fi
+
     echo ""
-    read -p "$( [ "$LANG_EN" = true ] && echo 'Continue? The script will attempt to auto-repair the certificate after restore (y/N): ' || echo 'Продолжить? Скрипт попытается автоматически починить сертификат после восстановления (y/N): ' )" KEY_MISMATCH_CONFIRM < /dev/tty
+    read -p "$( [ "$LANG_EN" = true ] && echo 'Continue? The script will attempt to auto-repair the certificate after restore (y/N): ' || echo 'Продолжить? Скрипт попытается автоматически починить сертификат после восстановления (y/N): ' )" KEY_MISMATCH_CONFIRM < /dev/tty || true
+
     [[ "$KEY_MISMATCH_CONFIRM" =~ ^[Yy]$ ]] || error "Восстановление отменено пользователем." "Restore cancelled by user."
+
     NEEDS_CERT_REPAIR=1
 fi
 
@@ -217,7 +457,8 @@ else
     echo "  2) Восстановить с новыми настройками"
 fi
 echo ""
-read -p "$( [ "$LANG_EN" = true ] && echo 'Your choice [1]: ' || echo 'Ваш выбор [1]: ' )" RESTORE_MODE < /dev/tty
+
+read -p "$( [ "$LANG_EN" = true ] && echo 'Your choice [1]: ' || echo 'Ваш выбор [1]: ' )" RESTORE_MODE < /dev/tty || true
 RESTORE_MODE=${RESTORE_MODE:-1}
 
 # ==============================================================================
@@ -226,8 +467,14 @@ RESTORE_MODE=${RESTORE_MODE:-1}
 TMP_EXTRACT=$(mktemp -d)
 trap 'rm -rf "$TMP_EXTRACT"' EXIT
 
-tar -xzf "$SELECTED_ARCHIVE" -C "$TMP_EXTRACT" .env 2>/dev/null || \
-    error "Не удалось извлечь .env из архива." "Failed to extract .env from archive."
+if [ "$IS_ENCRYPTED" = true ]; then
+    archive_extract_env "$TMP_EXTRACT/.env" 2>/dev/null || \
+        error "Не удалось извлечь .env из зашифрованного архива." \
+              "Failed to extract .env from encrypted archive."
+else
+    tar -x -z -f "$SELECTED_ARCHIVE" -C "$TMP_EXTRACT" .env 2>/dev/null || \
+        error "Не удалось извлечь .env из архива." "Failed to extract .env from archive."
+fi
 
 # shellcheck disable=SC1090
 source "$TMP_EXTRACT/.env"
@@ -246,6 +493,7 @@ if [ "$RESTORE_MODE" = "1" ]; then
     NEW_WEB_DIR="$OLD_WEB_DIR"
     NEW_MAIN_DOMAIN="$OLD_MAIN_DOMAIN"
     NEW_EXTERNAL_IP="$OLD_EXTERNAL_IP"
+
     NEW_INTERNAL_IP=$(ip route get 1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
     [ -z "$NEW_INTERNAL_IP" ] && NEW_INTERNAL_IP="$OLD_INTERNAL_IP"
 
@@ -256,43 +504,60 @@ if [ "$RESTORE_MODE" = "1" ]; then
     if [ -d "$NEW_BASE_DIR" ] && [ "$(ls -A "$NEW_BASE_DIR" 2>/dev/null)" ]; then
         warn "Директория $NEW_BASE_DIR не пуста. Существующие файлы будут перезаписаны данными из архива." \
              "Directory $NEW_BASE_DIR is not empty. Existing files will be overwritten with archive data."
-        read -p "$( [ "$LANG_EN" = true ] && echo 'Continue? (y/N): ' || echo 'Продолжить? (y/N): ' )" CONF < /dev/tty
+
+        read -p "$( [ "$LANG_EN" = true ] && echo 'Continue? (y/N): ' || echo 'Продолжить? (y/N): ' )" CONF < /dev/tty || true
         [[ "$CONF" =~ ^[Yy]$ ]] || error "Восстановление отменено пользователем." "Restore cancelled by user."
     fi
-
 else
     # ==========================================================================
     # РЕЖИМ 2: НОВЫЕ НАСТРОЙКИ
     # ==========================================================================
     echo ""
-    OPTIONS=(); PATHS=(); idx=1
+    OPTIONS=()
+    PATHS=()
+    idx=1
+
     for v in /volume*; do
         if [ -d "$v/docker" ]; then
-            OPTIONS+=("$idx) $v/docker/simplex"); PATHS+=("$v/docker/simplex"); idx=$((idx + 1))
+            OPTIONS+=("$idx) $v/docker/simplex")
+            PATHS+=("$v/docker/simplex")
+            idx=$((idx + 1))
         fi
     done
+
     [ ${#PATHS[@]} -eq 0 ] && error "Не найдено ни одного тома с директорией docker." \
-                                     "No volume with docker directory found."
+                                  "No volume with docker directory found."
 
     info "Доступные варианты базовой директории:" "Available base directory options:"
-    for opt in "${OPTIONS[@]}"; do echo "  $opt"; done
+    for opt in "${OPTIONS[@]}"; do
+        echo "  $opt"
+    done
     echo ""
+
     while true; do
-        read -p "$( [ "$LANG_EN" = true ] && echo 'Select option [1]: ' || echo 'Выберите номер варианта [1]: ' )" CHOICE < /dev/tty
+        read -p "$( [ "$LANG_EN" = true ] && echo 'Select option [1]: ' || echo 'Выберите номер варианта [1]: ' )" CHOICE < /dev/tty || true
         CHOICE=${CHOICE:-1}
+
         if [[ "$CHOICE" =~ ^[0-9]+$ ]] && [ "$CHOICE" -ge 1 ] && [ "$CHOICE" -le ${#PATHS[@]} ]; then
-            NEW_BASE_DIR="${PATHS[$((CHOICE - 1))]}"; break
+            NEW_BASE_DIR="${PATHS[$((CHOICE - 1))]}"
+            break
         else
             warn "Некорректный выбор." "Invalid choice."
         fi
     done
 
-    WEB_VOLUMES=(); WEB_PATHS=(); widx=1
+    WEB_VOLUMES=()
+    WEB_PATHS=()
+    widx=1
+
     for v in /volume*; do
         if [ -d "$v/web" ]; then
-            WEB_VOLUMES+=("$widx) $v/web/simplex"); WEB_PATHS+=("$v/web/simplex"); widx=$((widx + 1))
+            WEB_VOLUMES+=("$widx) $v/web/simplex")
+            WEB_PATHS+=("$v/web/simplex")
+            widx=$((widx + 1))
         fi
     done
+
     if [ ${#WEB_PATHS[@]} -eq 0 ]; then
         NEW_WEB_DIR="/volume1/web/simplex"
         warn "Папка /web не найдена. Используется $NEW_WEB_DIR" "Folder /web not found. Using $NEW_WEB_DIR"
@@ -302,41 +567,58 @@ else
     else
         echo ""
         info "Доступные варианты для веб-файлов:" "Available options for web files:"
-        for opt in "${WEB_VOLUMES[@]}"; do echo "  $opt"; done
+        for opt in "${WEB_VOLUMES[@]}"; do
+            echo "  $opt"
+        done
         echo ""
+
         while true; do
-            read -p "$( [ "$LANG_EN" = true ] && echo 'Select option [1]: ' || echo 'Выберите номер варианта [1]: ' )" WEB_CHOICE < /dev/tty
+            read -p "$( [ "$LANG_EN" = true ] && echo 'Select option [1]: ' || echo 'Выберите номер варианта [1]: ' )" WEB_CHOICE < /dev/tty || true
             WEB_CHOICE=${WEB_CHOICE:-1}
+
             if [[ "$WEB_CHOICE" =~ ^[0-9]+$ ]] && [ "$WEB_CHOICE" -ge 1 ] && [ "$WEB_CHOICE" -le ${#WEB_PATHS[@]} ]; then
-                NEW_WEB_DIR="${WEB_PATHS[$((WEB_CHOICE - 1))]}"; break
+                NEW_WEB_DIR="${WEB_PATHS[$((WEB_CHOICE - 1))]}"
+                break
             else
                 warn "Некорректный выбор." "Invalid choice."
             fi
         done
     fi
+
     mkdir -p "$NEW_WEB_DIR"
 
     NEW_INTERNAL_IP=$(ip route get 1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
     [ -z "$NEW_INTERNAL_IP" ] && error "Не удалось определить внутренний IP NAS." "Failed to determine internal NAS IP."
 
     DETECTED_EXT_IP=$(curl -fsSL --max-time 5 https://ifconfig.me 2>/dev/null || echo "")
-    read -p "$( [ "$LANG_EN" = true ] && echo "Enter external IP [$DETECTED_EXT_IP]: " || echo "Введите внешний IP-адрес [$DETECTED_EXT_IP]: " )" INPUT_EXT_IP < /dev/tty
+
+    read -p "$( [ "$LANG_EN" = true ] && echo "Enter external IP [$DETECTED_EXT_IP]: " || echo "Введите внешний IP-адрес [$DETECTED_EXT_IP]: " )" INPUT_EXT_IP < /dev/tty || true
     NEW_EXTERNAL_IP=${INPUT_EXT_IP:-$DETECTED_EXT_IP}
     [ -z "$NEW_EXTERNAL_IP" ] && error "Внешний IP не может быть пустым." "External IP cannot be empty."
 
     while true; do
-        read -p "$( [ "$LANG_EN" = true ] && echo "Enter domain name [$OLD_MAIN_DOMAIN]: " || echo "Введите доменное имя [$OLD_MAIN_DOMAIN]: " )" INPUT_DOMAIN < /dev/tty
+        read -p "$( [ "$LANG_EN" = true ] && echo "Enter domain name [$OLD_MAIN_DOMAIN]: " || echo "Введите доменное имя [$OLD_MAIN_DOMAIN]: " )" INPUT_DOMAIN < /dev/tty || true
         NEW_MAIN_DOMAIN=${INPUT_DOMAIN:-$OLD_MAIN_DOMAIN}
-        [ -z "$NEW_MAIN_DOMAIN" ] && { warn "Домен не может быть пустым." "Domain cannot be empty."; continue; }
+
+        [ -z "$NEW_MAIN_DOMAIN" ] && {
+            warn "Домен не может быть пустым." "Domain cannot be empty."
+            continue
+        }
+
         DOTS="${NEW_MAIN_DOMAIN//[^.]}"
-        [ -z "$DOTS" ] && { warn "Домен должен содержать точку." "Domain must contain a dot."; continue; }
+        [ -z "$DOTS" ] && {
+            warn "Домен должен содержать точку." "Domain must contain a dot."
+            continue
+        }
+
         break
     done
 
     if [ -d "$NEW_BASE_DIR" ] && [ "$(ls -A "$NEW_BASE_DIR" 2>/dev/null)" ]; then
         warn "Директория $NEW_BASE_DIR не пуста. Существующие файлы будут перезаписаны." \
              "Directory $NEW_BASE_DIR is not empty. Existing files will be overwritten."
-        read -p "$( [ "$LANG_EN" = true ] && echo 'Continue? (y/N): ' || echo 'Продолжить? (y/N): ' )" CONF < /dev/tty
+
+        read -p "$( [ "$LANG_EN" = true ] && echo 'Continue? (y/N): ' || echo 'Продолжить? (y/N): ' )" CONF < /dev/tty || true
         [[ "$CONF" =~ ^[Yy]$ ]] || error "Восстановление отменено пользователем." "Restore cancelled by user."
     fi
 fi
@@ -361,9 +643,11 @@ done
 # ==============================================================================
 echo ""
 info "Распаковка архива в $NEW_BASE_DIR ..." "Extracting archive to $NEW_BASE_DIR ..."
+
 mkdir -p "$NEW_BASE_DIR"
-tar -xzf "$SELECTED_ARCHIVE" -C "$NEW_BASE_DIR"
-success "Архив распакован." "Archive extracted."
+
+archive_extract_all "$NEW_BASE_DIR" || \
+    error "Не удалось распаковать архив." "Failed to extract archive."
 
 success "Архив распакован." "Archive extracted."
 
@@ -372,31 +656,31 @@ chown -R 1000:1000 "$NEW_BASE_DIR/smp" "$NEW_BASE_DIR/xftp" 2>/dev/null || true
 # ==============================================================================
 # 6b. БЕЗОПАСНЫЕ ПРАВА ПОСЛЕ РАСПАКОВКИ
 # ------------------------------------------------------------------------------
-
-NEW_BASE_DIR="${NEW_BASE_DIR%/}"
-NEW_WEB_DIR="${NEW_WEB_DIR%/}"
-
 # Если веб-папка находится внутри базовой директории, базовая директория должна
 # быть проходимой для веб-сервера.
 # 751 разрешает вход/переход, но не даёт листинг содержимого.
+# ==============================================================================
+NEW_BASE_DIR="${NEW_BASE_DIR%/}"
+NEW_WEB_DIR="${NEW_WEB_DIR%/}"
+
 case "${NEW_WEB_DIR}/" in
-  "${NEW_BASE_DIR}/"*)
-    chmod 751 "$NEW_BASE_DIR" 2>/dev/null || true
-    ;;
-  *)
-    chmod 750 "$NEW_BASE_DIR" 2>/dev/null || true
-    ;;
+    "${NEW_BASE_DIR}/"*)
+        chmod 751 "$NEW_BASE_DIR" 2>/dev/null || true
+        ;;
+    *)
+        chmod 750 "$NEW_BASE_DIR" 2>/dev/null || true
+        ;;
 esac
 
 # SMP/XFTP: владельцем контейнерных данных остаётся 1000:1000.
 if [ -d "$NEW_BASE_DIR/smp" ]; then
-  find "$NEW_BASE_DIR/smp" -type d -exec chmod 750 {} + 2>/dev/null || true
-  find "$NEW_BASE_DIR/smp" -type f -exec chmod 640 {} + 2>/dev/null || true
+    find "$NEW_BASE_DIR/smp" -type d -exec chmod 750 {} + 2>/dev/null || true
+    find "$NEW_BASE_DIR/smp" -type f -exec chmod 640 {} + 2>/dev/null || true
 fi
 
 if [ -d "$NEW_BASE_DIR/xftp" ]; then
-  find "$NEW_BASE_DIR/xftp" -type d -exec chmod 750 {} + 2>/dev/null || true
-  find "$NEW_BASE_DIR/xftp" -type f -exec chmod 640 {} + 2>/dev/null || true
+    find "$NEW_BASE_DIR/xftp" -type d -exec chmod 750 {} + 2>/dev/null || true
+    find "$NEW_BASE_DIR/xftp" -type f -exec chmod 640 {} + 2>/dev/null || true
 fi
 
 # Секреты должны быть закрыты.
@@ -405,17 +689,17 @@ chmod 600 "$NEW_BASE_DIR/CONNECTION_DETAILS.txt" 2>/dev/null || true
 
 # Скрипты делаем исполняемыми точечно.
 for f in "$NEW_BASE_DIR/simplex-backup.sh" "$NEW_BASE_DIR/restore.sh" "$NEW_BASE_DIR/passnew.sh"; do
-  [ -f "$f" ] && chmod 700 "$f" 2>/dev/null || true
+    [ -f "$f" ] && chmod 700 "$f" 2>/dev/null || true
 done
 
 for f in "$NEW_BASE_DIR/status-update.sh"; do
-  [ -f "$f" ] && chmod 755 "$f" 2>/dev/null || true
+    [ -f "$f" ] && chmod 755 "$f" 2>/dev/null || true
 done
 
 # Резервные копии закрываем.
 if [ -d "$NEW_BASE_DIR/backups" ]; then
-  chmod 700 "$NEW_BASE_DIR/backups" 2>/dev/null || true
-  find "$NEW_BASE_DIR/backups" -type f -exec chmod 600 {} + 2>/dev/null || true
+    chmod 700 "$NEW_BASE_DIR/backups" 2>/dev/null || true
+    find "$NEW_BASE_DIR/backups" -type f -exec chmod 600 {} + 2>/dev/null || true
 fi
 
 success "Права базовой директории скорректированы без рекурсивного закрытия веб-файлов." \
@@ -430,6 +714,8 @@ if [ "$RESTORE_MODE" = "2" ]; then
 
     # shellcheck disable=SC1090
     source "$NEW_BASE_DIR/.env"
+
+    ADMIN_EMAIL="${ADMIN_EMAIL:-admin@$NEW_MAIN_DOMAIN}"
 
     cat > "$NEW_BASE_DIR/.env" << EOF
 MAIN_DOMAIN=$NEW_MAIN_DOMAIN
@@ -447,6 +733,7 @@ BASE_DIR=$NEW_BASE_DIR
 WEB_DIR=$NEW_WEB_DIR
 TZ=${TZ:-UTC}
 EOF
+
     chmod 600 "$NEW_BASE_DIR/.env"
 
     # Пересоздаём RSA-сертификат ВЕБ-ПАНЕЛИ под новый домен (smp/certificates,
@@ -456,12 +743,16 @@ EOF
     if [ "$NEW_SMP_DOMAIN" != "smp.$OLD_MAIN_DOMAIN" ]; then
         info "Домен изменился — генерация сертификата веб-панели для $NEW_SMP_DOMAIN..." \
              "Domain changed — generating WEB dashboard certificate for $NEW_SMP_DOMAIN..."
+
         openssl req -x509 -newkey rsa:4096 -nodes \
             -keyout "$NEW_BASE_DIR/smp/certificates/$NEW_SMP_DOMAIN.key" \
             -out    "$NEW_BASE_DIR/smp/certificates/$NEW_SMP_DOMAIN.crt" \
             -days 3650 -subj "/CN=$NEW_SMP_DOMAIN" 2>/dev/null
-        chown 1000:1000 "$NEW_BASE_DIR/smp/certificates/"*
+
+        chown 1000:1000 "$NEW_BASE_DIR/smp/certificates/"* 2>/dev/null || true
+
         DOMAIN_CHANGED=1
+
         warn "ВНИМАНИЕ: смена домена меняет ADDR сервера. Fingerprint сохранён из бэкапа, но клиентам потребуются новые адреса подключения (см. отчёт ниже)." \
              "WARNING: changing the domain changes the server ADDR. Fingerprint is preserved from backup, but clients will need updated connection addresses (see report below)."
     fi
@@ -486,6 +777,7 @@ services:
       - STORE_LOG=on
       - SMP_SERVER_TLS_CERT=/certificates/${NEW_SMP_DOMAIN}.crt
       - SMP_SERVER_TLS_KEY=/certificates/${NEW_SMP_DOMAIN}.key
+
   xftp-server:
     image: simplexchat/xftp-server:v6.5.2
     container_name: simplex-xftp
@@ -501,6 +793,7 @@ services:
       - QUOTA=100gb
       - PASS=${XFTP_PASS}
     command: ["xftp-server", "run"]
+
   turn-server:
     image: coturn/coturn:4.6.3-r0
     container_name: simplex-turn
@@ -551,12 +844,15 @@ if [ "${NEEDS_CERT_REPAIR:-0}" = "1" ] || [ "${DOMAIN_CHANGED:-0}" = "1" ]; then
     if [ ! -s "$SMP_CONFIG_DIR/openssl_server.conf" ]; then
         warn "openssl_server.conf отсутствует — создаётся с параметрами по умолчанию." \
              "openssl_server.conf missing — creating with default parameters."
+
         cat > "$SMP_CONFIG_DIR/openssl_server.conf" << SRVCONF
 [req]
 distinguished_name = req_distinguished_name
 prompt = no
+
 [req_distinguished_name]
 CN = $NEW_SMP_DOMAIN
+
 [v3]
 basicConstraints = CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyAgreement
@@ -569,7 +865,9 @@ SRVCONF
 
     BROKEN_BACKUP_DIR="$SMP_CONFIG_DIR/broken-rsa-backup"
     mkdir -p "$BROKEN_BACKUP_DIR"
+
     TS=$(date +%s)
+
     [ -f "$SMP_CONFIG_DIR/server.crt" ] && mv "$SMP_CONFIG_DIR/server.crt" "$BROKEN_BACKUP_DIR/server.crt.$TS"
     [ -f "$SMP_CONFIG_DIR/server.key" ] && mv "$SMP_CONFIG_DIR/server.key" "$BROKEN_BACKUP_DIR/server.key.$TS"
     [ -f "$SMP_CONFIG_DIR/server.csr" ] && mv "$SMP_CONFIG_DIR/server.csr" "$BROKEN_BACKUP_DIR/server.csr.$TS"
@@ -605,6 +903,7 @@ fi
 # 8. ЗАПУСК КОНТЕЙНЕРОВ
 # ==============================================================================
 cd "$NEW_BASE_DIR"
+
 info "Загрузка образов..." "Pulling images..."
 $COMPOSE_CMD pull || warn "Не удалось обновить образы, используются локальные." \
                           "Failed to pull images, using local ones."
@@ -613,6 +912,7 @@ info "Запуск контейнеров..." "Starting containers..."
 $COMPOSE_CMD up -d || error "Не удалось запустить контейнеры." "Failed to start containers."
 
 sleep 5
+
 for svc in simplex-smp simplex-xftp simplex-turn; do
     if ! docker inspect -f '{{.State.Running}}' "$svc" 2>/dev/null | grep -q true; then
         warn "Логи $svc:" "Logs $svc:"
@@ -620,14 +920,17 @@ for svc in simplex-smp simplex-xftp simplex-turn; do
         error "$svc не запустился." "$svc failed to start."
     fi
 done
+
 success "Все контейнеры запущены." "All containers started."
 
 # ==============================================================================
 # 9. ПОЛУЧЕНИЕ FINGERPRINT И ФОРМИРОВАНИЕ АДРЕСОВ
 # ==============================================================================
 info "Чтение fingerprint..." "Reading fingerprint..."
+
 SMP_FP=$(cat "$NEW_BASE_DIR/smp/config/fingerprint" 2>/dev/null | head -1)
 [ -z "$SMP_FP" ] && SMP_FP=$(docker logs simplex-smp 2>&1 | grep -i "Fingerprint:" | tail -1 | awk '{print $NF}')
+
 XFTP_FP=$(cat "$NEW_BASE_DIR/xftp/config/fingerprint" 2>/dev/null | head -1)
 [ -z "$XFTP_FP" ] && XFTP_FP=$(docker logs simplex-xftp 2>&1 | grep -i "Fingerprint:" | tail -1 | awk '{print $NF}')
 
@@ -636,6 +939,7 @@ XFTP_FP=$(cat "$NEW_BASE_DIR/xftp/config/fingerprint" 2>/dev/null | head -1)
 
 SMP_ADDRESS="smp://${SMP_FP}:${SMP_PASS}@${NEW_SMP_DOMAIN}:5224"
 XFTP_ADDRESS="xftp://${XFTP_FP}:${XFTP_PASS}@${NEW_XFTP_DOMAIN}:7788"
+
 TURN_UDP="turn:${TURN_USER}:${TURN_PASS}@${NEW_TURN_DOMAIN}:3478?transport=udp"
 TURN_TLS="turns:${TURN_USER}:${TURN_PASS}@${NEW_TURN_DOMAIN}:5349?transport=tcp"
 STUN_ADDR="stun:${NEW_TURN_DOMAIN}:3478"
@@ -652,19 +956,23 @@ SIMPLEX CHAT SERVER — ВОССТАНОВЛЕНО ИЗ БЭКАПА
 Внутренний IP: $NEW_INTERNAL_IP
 
 🔗 АДРЕСА ДЛЯ КЛИЕНТА:
+
 SMP:  ${SMP_ADDRESS}
 XFTP: ${XFTP_ADDRESS}
 
 📞 TURN / STUN:
+
 ${STUN_ADDR}
 ${TURN_UDP}
 ${TURN_TLS}
 
 📁 ФАЙЛЫ:
+
 Конфигурация: $NEW_BASE_DIR/.env
 Веб-директория: $NEW_WEB_DIR
 ================================================================
 EOF
+
 chmod 600 "$NEW_BASE_DIR/CONNECTION_DETAILS.txt"
 
 # ==============================================================================
@@ -676,26 +984,25 @@ NEW_WEB_DIR="${NEW_WEB_DIR%/}"
 [ -z "$NEW_WEB_DIR" ] && NEW_WEB_DIR="/volume1/web/simplex"
 
 if [ -n "${OLD_WEB_DIR:-}" ]; then
-  OLD_WEB_DIR="${OLD_WEB_DIR%/}"
+    OLD_WEB_DIR="${OLD_WEB_DIR%/}"
 fi
 
 js_escape() {
-  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+    printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
 }
 
 write_connection_js() {
-  local details="$1"
-  local out="$2"
+    local details="$1"
+    local out="$2"
+    local smp xftp stun turn turns
 
-  local smp xftp stun turn turns
+    smp=$(grep '^SMP:' "$details" 2>/dev/null | head -n1 | sed 's/^SMP:[[:space:]]*//; s/\r$//' || true)
+    xftp=$(grep '^XFTP:' "$details" 2>/dev/null | head -n1 | sed 's/^XFTP:[[:space:]]*//; s/\r$//' || true)
+    stun=$(grep '^stun:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
+    turn=$(grep '^turn:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
+    turns=$(grep '^turns:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
 
-  smp=$(grep '^SMP:' "$details" 2>/dev/null | head -n1 | sed 's/^SMP:[[:space:]]*//; s/\r$//' || true)
-  xftp=$(grep '^XFTP:' "$details" 2>/dev/null | head -n1 | sed 's/^XFTP:[[:space:]]*//; s/\r$//' || true)
-  stun=$(grep '^stun:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
-  turn=$(grep '^turn:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
-  turns=$(grep '^turns:' "$details" 2>/dev/null | head -n1 | sed 's/\r$//' || true)
-
-  cat > "$out" <<EOF
+    cat > "$out" <<EOF
 window.SIMPLEX_CONN = {
   "smp": "$(js_escape "$smp")",
   "xftp": "$(js_escape "$xftp")",
@@ -706,13 +1013,13 @@ window.SIMPLEX_CONN = {
 };
 EOF
 
-  chmod 644 "$out"
+    chmod 644 "$out"
 }
 
 create_dynamic_qrsmp() {
-  local out="$1"
+    local out="$1"
 
-  cat > "$out" <<'WEBEOF'
+    cat > "$out" <<'WEBEOF'
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -730,25 +1037,21 @@ button{padding:8px 12px;border-radius:8px;border:0;background:#8B5CF6;color:#fff
 </head>
 <body>
 <h1>SimpleX Control</h1>
-
 <div class="card">
-  <h2>SMP</h2>
-  <pre id="smp"></pre>
-  <button onclick="copyText('smp')">Copy</button>
+<h2>SMP</h2>
+<pre id="smp"></pre>
+<button onclick="copyText('smp')">Copy</button>
 </div>
-
 <div class="card">
-  <h2>XFTP</h2>
-  <pre id="xftp"></pre>
-  <button onclick="copyText('xftp')">Copy</button>
+<h2>XFTP</h2>
+<pre id="xftp"></pre>
+<button onclick="copyText('xftp')">Copy</button>
 </div>
-
 <div class="card">
-  <h2>TURN / STUN</h2>
-  <pre id="turn"></pre>
-  <button onclick="copyText('turn')">Copy</button>
+<h2>TURN / STUN</h2>
+<pre id="turn"></pre>
+<button onclick="copyText('turn')">Copy</button>
 </div>
-
 <script>
 function connValue(k) {
   return (window.SIMPLEX_CONN && window.SIMPLEX_CONN[k]) || "";
@@ -768,7 +1071,6 @@ function render() {
 
 function copyText(id) {
   var text = id === 'turn' ? turnText() : connValue(id);
-
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text);
   } else {
@@ -787,61 +1089,61 @@ document.addEventListener('DOMContentLoaded', render);
 </html>
 WEBEOF
 
-  chmod 644 "$out"
+    chmod 644 "$out"
 }
 
 mkdir -p "$NEW_WEB_DIR"
 
 if [ -d "$NEW_WEB_DIR" ] && [ "$(ls -A "$NEW_WEB_DIR" 2>/dev/null)" ]; then
-  warn "Директория $NEW_WEB_DIR не пуста — веб-файлы будут перезаписаны/дополнены." \
-       "Directory $NEW_WEB_DIR is not empty — web files will be overwritten/merged."
+    warn "Директория $NEW_WEB_DIR не пуста — веб-файлы будут перезаписаны/дополнены." \
+         "Directory $NEW_WEB_DIR is not empty — web files will be overwritten/merged."
 fi
 
 # --- Восстановление веб-папки из архива, если она там есть -------------------
 if [ -d "$NEW_BASE_DIR/web" ]; then
-  WEB_SRC_DIR=$(find "$NEW_BASE_DIR/web" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1)
-  [ -n "$WEB_SRC_DIR" ] || WEB_SRC_DIR="$NEW_BASE_DIR/web"
+    WEB_SRC_DIR=$(find "$NEW_BASE_DIR/web" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1)
+    [ -n "$WEB_SRC_DIR" ] || WEB_SRC_DIR="$NEW_BASE_DIR/web"
 
-  SKIP_WEB_MOVE=false
+    SKIP_WEB_MOVE=false
 
-  # Если целевая веб-папка и есть распакованная папка из архива,
-  # копировать и удалять её нельзя.
-  if [ "$NEW_WEB_DIR" = "$WEB_SRC_DIR" ]; then
-    SKIP_WEB_MOVE=true
-  fi
+    # Если целевая веб-папка и есть распакованная папка из архива,
+    # копировать и удалять её нельзя.
+    if [ "$NEW_WEB_DIR" = "$WEB_SRC_DIR" ]; then
+        SKIP_WEB_MOVE=true
+    fi
 
-  # Если целевая веб-папка находится внутри временной распакованной веб-папки,
-  # удалять $NEW_BASE_DIR/web нельзя.
-  case "${NEW_WEB_DIR}/" in
-    "${NEW_BASE_DIR}/web/"*)
-      SKIP_WEB_MOVE=true
-      ;;
-  esac
+    # Если целевая веб-папка находится внутри временной распакованной веб-папки,
+    # удалять $NEW_BASE_DIR/web нельзя.
+    case "${NEW_WEB_DIR}/" in
+        "${NEW_BASE_DIR}/web/"*)
+            SKIP_WEB_MOVE=true
+            ;;
+    esac
 
-  if [ "$SKIP_WEB_MOVE" = false ]; then
-    mkdir -p "$NEW_WEB_DIR"
-    cp -a "$WEB_SRC_DIR/." "$NEW_WEB_DIR/"
-    rm -rf "$NEW_BASE_DIR/web"
+    if [ "$SKIP_WEB_MOVE" = false ]; then
+        mkdir -p "$NEW_WEB_DIR"
+        cp -a "$WEB_SRC_DIR/." "$NEW_WEB_DIR/"
+        rm -rf "$NEW_BASE_DIR/web"
 
-    success "Web-файлы восстановлены из архива в $NEW_WEB_DIR" \
-            "Web files restored from archive to $NEW_WEB_DIR"
-  else
-    success "Web-файлы уже находятся в целевой директории: $NEW_WEB_DIR" \
-            "Web files are already in the target directory: $NEW_WEB_DIR"
-  fi
+        success "Web-файлы восстановлены из архива в $NEW_WEB_DIR" \
+                "Web files restored from archive to $NEW_WEB_DIR"
+    else
+        success "Web-файлы уже находятся в целевой директории: $NEW_WEB_DIR" \
+                "Web files are already in the target directory: $NEW_WEB_DIR"
+    fi
 else
-  warn "Web-файлы в архиве не найдены — создаётся минимальная веб-панель." \
-       "No web files found in archive — creating minimal web panel."
+    warn "Web-файлы в архиве не найдены — создаётся минимальная веб-панель." \
+         "No web files found in archive — creating minimal web panel."
 fi
 
 # --- Если веб-файлов нет, создаём минимальные динамические страницы ----------
 if [ ! -s "$NEW_WEB_DIR/qrsmp.html" ]; then
-  create_dynamic_qrsmp "$NEW_WEB_DIR/qrsmp.html"
-  success "Создан динамический qrsmp.html." "Dynamic qrsmp.html created."
+    create_dynamic_qrsmp "$NEW_WEB_DIR/qrsmp.html"
+    success "Создан динамический qrsmp.html." "Dynamic qrsmp.html created."
 fi
 
 if [ ! -s "$NEW_WEB_DIR/index.html" ]; then
-  cat > "$NEW_WEB_DIR/index.html" <<'WEBEOF'
+    cat > "$NEW_WEB_DIR/index.html" <<'WEBEOF'
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -855,7 +1157,7 @@ if [ ! -s "$NEW_WEB_DIR/index.html" ]; then
 </html>
 WEBEOF
 
-  chmod 644 "$NEW_WEB_DIR/index.html"
+    chmod 644 "$NEW_WEB_DIR/index.html"
 fi
 
 # --- Всегда пересоздаём connection.js из актуального CONNECTION_DETAILS.txt ---
@@ -879,296 +1181,293 @@ WEB_CRED_BEGIN="# === SIMPLEX WEB PANEL CREDENTIALS BEGIN ==="
 WEB_CRED_END="# === SIMPLEX WEB PANEL CREDENTIALS END ==="
 
 update_connection_details_web() {
-  local details="$1"
-  local login="$2"
-  local pass="$3"
-  local ts="$4"
+    local details="$1"
+    local login="$2"
+    local pass="$3"
+    local ts="$4"
+    local tmp_details
+    local tmp_block
+    local panel_url
 
-  local tmp_details
-  local tmp_block
-  local panel_url
+    tmp_details=$(mktemp)
+    tmp_block=$(mktemp)
+    panel_url=""
 
-  tmp_details=$(mktemp)
-  tmp_block=$(mktemp)
-
-  panel_url=""
-  if [ -n "${NEW_MAIN_DOMAIN:-}" ]; then
-    panel_url="https://info.smp.${NEW_MAIN_DOMAIN}/qrsmp.html"
-  fi
-
-  {
-    echo "$WEB_CRED_BEGIN"
-    echo "🌐 ПАНЕЛЬ УПРАВЛЕНИЯ — ДАННЫЕ ВХОДА"
-    echo "Дата и время последней генерации: $ts"
-    echo "Логин / Login: $login"
-    echo "Пароль / Password: $pass"
-    echo "Файл паролей: $NEW_WEB_DIR/.htpasswd"
-    if [ -n "$panel_url" ]; then
-      echo "URL: $panel_url"
+    if [ -n "${NEW_MAIN_DOMAIN:-}" ]; then
+        panel_url="https://info.smp.${NEW_MAIN_DOMAIN}/qrsmp.html"
     fi
-    echo "Команда смены пароля: sudo /bin/bash $NEW_BASE_DIR/passnew.sh"
-    echo "$WEB_CRED_END"
-  } > "$tmp_block"
 
-  if [ -f "$details" ]; then
-    if grep -qF "$WEB_CRED_BEGIN" "$details" && grep -qF "$WEB_CRED_END" "$details"; then
-      awk -v b="$WEB_CRED_BEGIN" -v e="$WEB_CRED_END" \
-        '$0==b{skip=1; next} $0==e{skip=0; next} !skip' "$details" > "$tmp_details"
+    {
+        echo "$WEB_CRED_BEGIN"
+        echo "🌐 ПАНЕЛЬ УПРАВЛЕНИЯ — ДАННЫЕ ВХОДА"
+        echo "Дата и время последней генерации: $ts"
+        echo "Логин / Login: $login"
+        echo "Пароль / Password: $pass"
+        echo "Файл паролей: $NEW_WEB_DIR/.htpasswd"
+
+        if [ -n "$panel_url" ]; then
+            echo "URL: $panel_url"
+        fi
+
+        echo "Команда смены пароля: sudo /bin/bash $NEW_BASE_DIR/passnew.sh"
+        echo "$WEB_CRED_END"
+    } > "$tmp_block"
+
+    if [ -f "$details" ]; then
+        if grep -qF "$WEB_CRED_BEGIN" "$details" && grep -qF "$WEB_CRED_END" "$details"; then
+            awk -v b="$WEB_CRED_BEGIN" -v e="$WEB_CRED_END" \
+                '$0==b{skip=1; next} $0==e{skip=0; next} !skip' "$details" > "$tmp_details"
+        else
+            cat "$details" > "$tmp_details"
+        fi
+
+        printf '\n' >> "$tmp_details"
+        cat "$tmp_details" "$tmp_block" > "$details"
     else
-      cat "$details" > "$tmp_details"
+        cat "$tmp_block" > "$details"
     fi
 
-    printf '\n' >> "$tmp_details"
-    cat "$tmp_details" "$tmp_block" > "$details"
-  else
-    cat "$tmp_block" > "$details"
-  fi
-
-  rm -f "$tmp_details" "$tmp_block"
-  chmod 600 "$details"
+    rm -f "$tmp_details" "$tmp_block"
+    chmod 600 "$details"
 }
 
 WEB_ACCESS_CHOICE="${WEB_ACCESS_CHOICE_OVERRIDE:-}"
 
 if [ -z "$WEB_ACCESS_CHOICE" ]; then
-  echo ""
-  if [ "$LANG_EN" = true ]; then
-    echo "Web panel access:"
-    echo "  1) Generate new login/password (recommended, old .htpasswd will be replaced)"
-    echo "  2) Keep existing .htpasswd from backup"
-  else
-    echo "Доступ к веб-панели:"
-    echo "  1) Сгенерировать новый логин/пароль (рекомендуется, старый .htpasswd будет заменён)"
-    echo "  2) Оставить существующий .htpasswd из бэкапа"
-  fi
-  echo ""
+    echo ""
+    if [ "$LANG_EN" = true ]; then
+        echo "Web panel access:"
+        echo "  1) Generate new login/password (recommended, old .htpasswd will be replaced)"
+        echo "  2) Keep existing .htpasswd from backup"
+    else
+        echo "Доступ к веб-панели:"
+        echo "  1) Сгенерировать новый логин/пароль (рекомендуется, старый .htpasswd будет заменён)"
+        echo "  2) Оставить существующий .htpasswd из бэкапа"
+    fi
+    echo ""
 
-  read -p "$( [ "$LANG_EN" = true ] && echo 'Your choice [1]: ' || echo 'Ваш выбор [1]: ' )" \
-    WEB_ACCESS_CHOICE < /dev/tty || true
+    read -p "$( [ "$LANG_EN" = true ] && echo 'Your choice [1]: ' || echo 'Ваш выбор [1]: ' )" \
+        WEB_ACCESS_CHOICE < /dev/tty || true
 
-  WEB_ACCESS_CHOICE="${WEB_ACCESS_CHOICE:-1}"
+    WEB_ACCESS_CHOICE="${WEB_ACCESS_CHOICE:-1}"
 fi
 
 GENERATE_WEB_CREDENTIALS=false
 
 if [ "$WEB_ACCESS_CHOICE" != "2" ]; then
-  GENERATE_WEB_CREDENTIALS=true
-else
-  if [ ! -f "$NEW_WEB_DIR/.htpasswd" ]; then
-    warn "Выбрано сохранение существующего .htpasswd, но файл не найден. Будет создан новый пароль." \
-         "Keeping existing .htpasswd was selected, but the file was not found. A new password will be created."
     GENERATE_WEB_CREDENTIALS=true
-  fi
+else
+    if [ ! -f "$NEW_WEB_DIR/.htpasswd" ]; then
+        warn "Выбрано сохранение существующего .htpasswd, но файл не найден. Будет создан новый пароль." \
+             "Keeping existing .htpasswd was selected, but the file was not found. A new password will be created."
+        GENERATE_WEB_CREDENTIALS=true
+    fi
 fi
 
 if [ "$GENERATE_WEB_CREDENTIALS" = true ]; then
+    WEB_LOGIN="${WEB_LOGIN_OVERRIDE:-}"
 
-  WEB_LOGIN="${WEB_LOGIN_OVERRIDE:-}"
+    if [ -z "$WEB_LOGIN" ]; then
+        read -p "$( [ "$LANG_EN" = true ] && echo 'Web panel login [admin]: ' || echo 'Логин веб-панели [admin]: ' )" \
+            WEB_LOGIN < /dev/tty || true
+        WEB_LOGIN="${WEB_LOGIN:-admin}"
+    fi
 
-  if [ -z "$WEB_LOGIN" ]; then
-    read -p "$( [ "$LANG_EN" = true ] && echo 'Web panel login [admin]: ' || echo 'Логин веб-панели [admin]: ' )" \
-      WEB_LOGIN < /dev/tty || true
+    if [[ ! "$WEB_LOGIN" =~ ^[A-Za-z0-9._@-]+$ ]]; then
+        warn "Некорректный логин. Разрешены только буквы, цифры и символы . _ @ -. Используется admin." \
+             "Invalid login. Allowed characters are letters, digits and . _ @ -. Using admin."
+        WEB_LOGIN="admin"
+    fi
 
-    WEB_LOGIN="${WEB_LOGIN:-admin}"
-  fi
+    WEB_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
 
-  if [[ ! "$WEB_LOGIN" =~ ^[A-Za-z0-9._@-]+$ ]]; then
-    warn "Некорректный логин. Разрешены только буквы, цифры и символы . _ @ -. Используется admin." \
-         "Invalid login. Allowed characters are letters, digits and . _ @ -. Using admin."
-    WEB_LOGIN="admin"
-  fi
+    if [ ${#WEB_PASS} -lt 16 ]; then
+        WEB_PASS="${WEB_PASS}$(openssl rand -hex 8)"
+        WEB_PASS="${WEB_PASS:0:16}"
+    fi
 
-  WEB_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
+    WEB_HASH=$(openssl passwd -apr1 "$WEB_PASS" 2>/dev/null || openssl passwd -1 "$WEB_PASS" || true)
 
-  if [ ${#WEB_PASS} -lt 16 ]; then
-    WEB_PASS="${WEB_PASS}$(openssl rand -hex 8)"
-    WEB_PASS="${WEB_PASS:0:16}"
-  fi
+    if [ -z "$WEB_HASH" ]; then
+        error "Не удалось создать hash для пароля веб-панели." \
+              "Failed to create password hash for the web panel."
+    fi
 
-  WEB_HASH=$(openssl passwd -apr1 "$WEB_PASS" 2>/dev/null || openssl passwd -1 "$WEB_PASS" || true)
+    mkdir -p "$NEW_WEB_DIR"
 
-  if [ -z "$WEB_HASH" ]; then
-    error "Не удалось создать hash для пароля веб-панели." \
-          "Failed to create password hash for the web panel."
-  fi
+    # Старый .htpasswd перезаписывается одним новым пользователем.
+    printf '%s:%s\n' "$WEB_LOGIN" "$WEB_HASH" > "$NEW_WEB_DIR/.htpasswd"
 
-  mkdir -p "$NEW_WEB_DIR"
+    WEB_GROUP=""
+    if getent group http >/dev/null 2>&1; then
+        WEB_GROUP="http"
+    elif grep -q '^http:' /etc/group 2>/dev/null; then
+        WEB_GROUP="http"
+    fi
 
-  # Старый .htpasswd перезаписывается одним новым пользователем.
-  printf '%s:%s\n' "$WEB_LOGIN" "$WEB_HASH" > "$NEW_WEB_DIR/.htpasswd"
+    if [ -n "$WEB_GROUP" ]; then
+        chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+        chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+    else
+        chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+        chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
 
-  WEB_GROUP=""
-  if getent group http >/dev/null 2>&1; then
-    WEB_GROUP="http"
-  elif grep -q '^http:' /etc/group 2>/dev/null; then
-    WEB_GROUP="http"
-  fi
+        warn "Группа http не найдена. .htpasswd закрыт правами 600. Если веб-сервер не может его прочитать, авторизация может возвращать 500." \
+             "http group not found. .htpasswd has 600 permissions. If the web server cannot read it, authentication may return 500."
+    fi
 
-  if [ -n "$WEB_GROUP" ]; then
-    chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-    chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-  else
-    chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-    chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-
-    warn "Группа http не найдена. .htpasswd закрыт правами 600. Если веб-сервер не может его прочитать, авторизация может возвращать 500." \
-         "http group not found. .htpasswd has 600 permissions. If the web server cannot read it, authentication may return 500."
-  fi
-
-  # Если .htaccess отсутствует, создаём базовую защиту.
-  if [ ! -f "$NEW_WEB_DIR/.htaccess" ]; then
-    cat > "$NEW_WEB_DIR/.htaccess" <<EOF
+    # Если .htaccess отсутствует, создаём базовую защиту.
+    if [ ! -f "$NEW_WEB_DIR/.htaccess" ]; then
+        cat > "$NEW_WEB_DIR/.htaccess" <<EOF
 <Files "qrsmp.html">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${NEW_WEB_DIR}/.htpasswd
-Require valid-user
+    AuthType Basic
+    AuthName "SimpleX Control"
+    AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+    Require valid-user
 </Files>
 
 <Files "status.json">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${NEW_WEB_DIR}/.htpasswd
-Require valid-user
+    AuthType Basic
+    AuthName "SimpleX Control"
+    AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+    Require valid-user
 </Files>
 
 <Files "connection.js">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${NEW_WEB_DIR}/.htpasswd
-Require valid-user
+    AuthType Basic
+    AuthName "SimpleX Control"
+    AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+    Require valid-user
 </Files>
 EOF
 
-    chmod 644 "$NEW_WEB_DIR/.htaccess"
-  fi
-
-  # Если .htaccess уже есть, но connection.js не защищён, добавляем защиту.
-  if ! grep -q '<Files "connection.js">' "$NEW_WEB_DIR/.htaccess" 2>/dev/null; then
-    cat >> "$NEW_WEB_DIR/.htaccess" <<EOF
-
-<Files "connection.js">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${NEW_WEB_DIR}/.htpasswd
-Require valid-user
-</Files>
-EOF
-
-    chmod 644 "$NEW_WEB_DIR/.htaccess"
-  fi
-
-  WEB_GEN_TS=$(date '+%Y-%m-%d %H:%M:%S')
-
-  update_connection_details_web \
-    "$NEW_BASE_DIR/CONNECTION_DETAILS.txt" \
-    "$WEB_LOGIN" \
-    "$WEB_PASS" \
-    "$WEB_GEN_TS"
-
-  success "Пароль веб-панели сгенерирован и записан в CONNECTION_DETAILS.txt." \
-          "Web panel password generated and saved to CONNECTION_DETAILS.txt."
-
-  echo ""
-  echo "----------------------------------------"
-  echo "Логин / Login: $WEB_LOGIN"
-  echo "Пароль / Password: $WEB_PASS"
-  echo "Дата и время: $WEB_GEN_TS"
-  echo "Файл: $NEW_WEB_DIR/.htpasswd"
-  echo "----------------------------------------"
-  echo ""
-
-  warn "Сохраните пароль. Старый пароль веб-панели был стёрт." \
-       "Save the password. The old web panel password has been erased."
-
-else
-
-  success "Использован существующий .htpasswd из бэкапа." \
-          "Existing .htpasswd from backup used."
-
-  WEB_GROUP=""
-  if getent group http >/dev/null 2>&1; then
-    WEB_GROUP="http"
-  elif grep -q '^http:' /etc/group 2>/dev/null; then
-    WEB_GROUP="http"
-  fi
-
-  if [ -f "$NEW_WEB_DIR/.htpasswd" ]; then
-    if [ -n "$WEB_GROUP" ]; then
-      chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-      chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-    else
-      chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-      chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+        chmod 644 "$NEW_WEB_DIR/.htaccess"
     fi
-  fi
 
-  warn "Пароль из бэкапа не отображается, так как .htpasswd хранит только hash." \
-       "The backup password is not shown because .htpasswd stores only a hash."
+    # Если .htaccess уже есть, но connection.js не защищён, добавляем защиту.
+    if ! grep -q '<Files "connection.js">' "$NEW_WEB_DIR/.htaccess" 2>/dev/null; then
+        cat >> "$NEW_WEB_DIR/.htaccess" <<EOF
+
+<Files "connection.js">
+    AuthType Basic
+    AuthName "SimpleX Control"
+    AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+    Require valid-user
+</Files>
+EOF
+
+        chmod 644 "$NEW_WEB_DIR/.htaccess"
+    fi
+
+    WEB_GEN_TS=$(date '+%Y-%m-%d %H:%M:%S')
+
+    update_connection_details_web \
+        "$NEW_BASE_DIR/CONNECTION_DETAILS.txt" \
+        "$WEB_LOGIN" \
+        "$WEB_PASS" \
+        "$WEB_GEN_TS"
+
+    success "Пароль веб-панели сгенерирован и записан в CONNECTION_DETAILS.txt." \
+            "Web panel password generated and saved to CONNECTION_DETAILS.txt."
+
+    echo ""
+    echo "----------------------------------------"
+    echo "Логин / Login: $WEB_LOGIN"
+    echo "Пароль / Password: $WEB_PASS"
+    echo "Дата и время: $WEB_GEN_TS"
+    echo "Файл: $NEW_WEB_DIR/.htpasswd"
+    echo "----------------------------------------"
+    echo ""
+
+    warn "Сохраните пароль. Старый пароль веб-панели был стёрт." \
+         "Save the password. The old web panel password has been erased."
+else
+    success "Использован существующий .htpasswd из бэкапа." \
+            "Existing .htpasswd from backup used."
+
+    WEB_GROUP=""
+    if getent group http >/dev/null 2>&1; then
+        WEB_GROUP="http"
+    elif grep -q '^http:' /etc/group 2>/dev/null; then
+        WEB_GROUP="http"
+    fi
+
+    if [ -f "$NEW_WEB_DIR/.htpasswd" ]; then
+        if [ -n "$WEB_GROUP" ]; then
+            chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+            chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+        else
+            chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+            chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+        fi
+    fi
+
+    warn "Пароль из бэкапа не отображается, так как .htpasswd хранит только hash." \
+         "The backup password is not shown because .htpasswd stores only a hash."
 fi
 
 # --- Если WEB_DIR изменился, чиним пути в .htaccess ---------------------------
 if [ -f "$NEW_WEB_DIR/.htaccess" ] && [ -n "${OLD_WEB_DIR:-}" ] && [ "$OLD_WEB_DIR" != "$NEW_WEB_DIR" ]; then
-  SAFE_OLD_WEB_DIR=$(printf '%s' "$OLD_WEB_DIR" | sed 's/[|&]/\\&/g')
-  SAFE_NEW_WEB_DIR=$(printf '%s' "$NEW_WEB_DIR" | sed 's/[|&]/\\&/g')
+    SAFE_OLD_WEB_DIR=$(printf '%s' "$OLD_WEB_DIR" | sed 's/[|&]/\\&/g')
+    SAFE_NEW_WEB_DIR=$(printf '%s' "$NEW_WEB_DIR" | sed 's/[|&]/\\&/g')
 
-  sed -i "s|$SAFE_OLD_WEB_DIR|$SAFE_NEW_WEB_DIR|g" "$NEW_WEB_DIR/.htaccess" 2>/dev/null || true
+    sed -i "s|$SAFE_OLD_WEB_DIR|$SAFE_NEW_WEB_DIR|g" "$NEW_WEB_DIR/.htaccess" 2>/dev/null || true
 
-  success "Пути в .htaccess обновлены под $NEW_WEB_DIR" \
-          "Paths in .htaccess updated to $NEW_WEB_DIR"
+    success "Пути в .htaccess обновлены под $NEW_WEB_DIR" \
+            "Paths in .htaccess updated to $NEW_WEB_DIR"
 fi
 
 # --- Если есть .htpasswd, защищаем .htaccess и connection.js ------------------
 if [ -f "$NEW_WEB_DIR/.htpasswd" ]; then
-  if [ ! -f "$NEW_WEB_DIR/.htaccess" ]; then
-    cat > "$NEW_WEB_DIR/.htaccess" <<EOF
+    if [ ! -f "$NEW_WEB_DIR/.htaccess" ]; then
+        cat > "$NEW_WEB_DIR/.htaccess" <<EOF
 <Files "qrsmp.html">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${NEW_WEB_DIR}/.htpasswd
-Require valid-user
+    AuthType Basic
+    AuthName "SimpleX Control"
+    AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+    Require valid-user
 </Files>
 
 <Files "status.json">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${NEW_WEB_DIR}/.htpasswd
-Require valid-user
+    AuthType Basic
+    AuthName "SimpleX Control"
+    AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+    Require valid-user
 </Files>
 
 <Files "connection.js">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${NEW_WEB_DIR}/.htpasswd
-Require valid-user
+    AuthType Basic
+    AuthName "SimpleX Control"
+    AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+    Require valid-user
 </Files>
 EOF
 
-    chmod 644 "$NEW_WEB_DIR/.htaccess"
-  fi
+        chmod 644 "$NEW_WEB_DIR/.htaccess"
+    fi
 
-  if ! grep -q '<Files "connection.js">' "$NEW_WEB_DIR/.htaccess" 2>/dev/null; then
-    cat >> "$NEW_WEB_DIR/.htaccess" <<EOF
+    if ! grep -q '<Files "connection.js">' "$NEW_WEB_DIR/.htaccess" 2>/dev/null; then
+        cat >> "$NEW_WEB_DIR/.htaccess" <<EOF
 
 <Files "connection.js">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${NEW_WEB_DIR}/.htpasswd
-Require valid-user
+    AuthType Basic
+    AuthName "SimpleX Control"
+    AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+    Require valid-user
 </Files>
 EOF
 
-    chmod 644 "$NEW_WEB_DIR/.htaccess"
-  fi
+        chmod 644 "$NEW_WEB_DIR/.htaccess"
+    fi
 else
-  if [ -f "$NEW_WEB_DIR/.htaccess" ]; then
-    warn ".htpasswd отсутствует рядом с .htaccess — проверьте защиту веб-панели вручную." \
-         ".htpasswd is missing next to .htaccess — check web panel protection manually."
-  fi
+    if [ -f "$NEW_WEB_DIR/.htaccess" ]; then
+        warn ".htpasswd отсутствует рядом с .htaccess — проверьте защиту веб-панели вручную." \
+             ".htpasswd is missing next to .htaccess — check web panel protection manually."
+    fi
 fi
 
 # ==============================================================================
-# 9c. НОРМАЛИЗАЦИЯ ПРАВ WEB_DIR (ИСПРАВЛЕНИЕ 403)
+# 9d. НОРМАЛИЗАЦИЯ ПРАВ WEB_DIR (ИСПРАВЛЕНИЕ 403)
 # ==============================================================================
 info "Нормализация прав веб-папки..." "Normalizing web directory permissions..."
 
@@ -1176,79 +1475,80 @@ NEW_WEB_DIR="${NEW_WEB_DIR%/}"
 NEW_BASE_DIR="${NEW_BASE_DIR%/}"
 
 if [ -d "$NEW_WEB_DIR" ]; then
+    # Если веб-папка находится внутри базовой директории, нужно разрешить
+    # веб-серверу проход по родительским каталогам.
+    if [ "$NEW_WEB_DIR" != "$NEW_BASE_DIR" ]; then
+        case "${NEW_WEB_DIR}/" in
+            "${NEW_BASE_DIR}/"*)
+                REL_WEB_PATH="${NEW_WEB_DIR#${NEW_BASE_DIR}/}"
+                CUR_DIR="$NEW_BASE_DIR"
 
-  # Если веб-папка находится внутри базовой директории, нужно разрешить
-  # веб-серверу проход по родительским каталогам.
-  if [ "$NEW_WEB_DIR" != "$NEW_BASE_DIR" ]; then
-    case "${NEW_WEB_DIR}/" in
-      "${NEW_BASE_DIR}/"*)
-        REL_WEB_PATH="${NEW_WEB_DIR#${NEW_BASE_DIR}/}"
-        CUR_DIR="$NEW_BASE_DIR"
+                chmod 751 "$CUR_DIR" 2>/dev/null || true
 
-        chmod 751 "$CUR_DIR" 2>/dev/null || true
+                IFS='/' read -r -a WEB_PATH_PARTS <<< "$REL_WEB_PATH"
+                WEB_PATH_LAST_INDEX=$(( ${#WEB_PATH_PARTS[@]} - 1 ))
 
-        IFS='/' read -r -a WEB_PATH_PARTS <<< "$REL_WEB_PATH"
-        WEB_PATH_LAST_INDEX=$(( ${#WEB_PATH_PARTS[@]} - 1 ))
+                for i in "${!WEB_PATH_PARTS[@]}"; do
+                    CUR_DIR="$CUR_DIR/${WEB_PATH_PARTS[$i]}"
 
-        for i in "${!WEB_PATH_PARTS[@]}"; do
-          CUR_DIR="$CUR_DIR/${WEB_PATH_PARTS[$i]}"
-
-          # Последний элемент — это сама веб-папка, ей позже поставим 755.
-          if [ "$i" -lt "$WEB_PATH_LAST_INDEX" ] && [ -d "$CUR_DIR" ]; then
-            chmod 751 "$CUR_DIR" 2>/dev/null || true
-          fi
-        done
-        ;;
-    esac
-  fi
-
-  # Сама веб-папка и вложенные каталоги должны быть проходимы и читаемы.
-  chmod 755 "$NEW_WEB_DIR" 2>/dev/null || true
-  find "$NEW_WEB_DIR" -type d -exec chmod 755 {} + 2>/dev/null || true
-
-  # Обычные веб-файлы должны читаться веб-сервером.
-  find "$NEW_WEB_DIR" -type f -exec chmod 644 {} + 2>/dev/null || true
-
-  # .htpasswd должен быть доступен веб-серверу, но не должен быть публичным.
-  if [ -f "$NEW_WEB_DIR/.htpasswd" ]; then
-    WEB_GROUP=""
-
-    if getent group http >/dev/null 2>&1; then
-      WEB_GROUP="http"
-    elif grep -q '^http:' /etc/group 2>/dev/null; then
-      WEB_GROUP="http"
+                    # Последний элемент — это сама веб-папка, ей позже поставим 755.
+                    if [ "$i" -lt "$WEB_PATH_LAST_INDEX" ] && [ -d "$CUR_DIR" ]; then
+                        chmod 751 "$CUR_DIR" 2>/dev/null || true
+                    fi
+                done
+                ;;
+        esac
     fi
 
-    if [ -n "$WEB_GROUP" ]; then
-      chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-      chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-      success ".htpasswd: root:${WEB_GROUP}, права 640." \
-              ".htpasswd: root:${WEB_GROUP}, permissions 640."
-    else
-      chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-      chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
-      warn "Группа http не найдена. .htpasswd имеет права 600. Если веб-сервер не может его прочитать, авторизация может возвращать 500." \
-           "http group not found. .htpasswd has 600 permissions. If the web server cannot read it, authentication may return 500."
+    # Сама веб-папка и вложенные каталоги должны быть проходимы и читаемы.
+    chmod 755 "$NEW_WEB_DIR" 2>/dev/null || true
+    find "$NEW_WEB_DIR" -type d -exec chmod 755 {} + 2>/dev/null || true
+
+    # Обычные веб-файлы должны читаться веб-сервером.
+    find "$NEW_WEB_DIR" -type f -exec chmod 644 {} + 2>/dev/null || true
+
+    # .htpasswd должен быть доступен веб-серверу, но не должен быть публичным.
+    if [ -f "$NEW_WEB_DIR/.htpasswd" ]; then
+        WEB_GROUP=""
+
+        if getent group http >/dev/null 2>&1; then
+            WEB_GROUP="http"
+        elif grep -q '^http:' /etc/group 2>/dev/null; then
+            WEB_GROUP="http"
+        fi
+
+        if [ -n "$WEB_GROUP" ]; then
+            chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+            chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+
+            success ".htpasswd: root:${WEB_GROUP}, права 640." \
+                    ".htpasswd: root:${WEB_GROUP}, permissions 640."
+        else
+            chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+            chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+
+            warn "Группа http не найдена. .htpasswd имеет права 600. Если веб-сервер не может его прочитать, авторизация может возвращать 500." \
+                 "http group not found. .htpasswd has 600 permissions. If the web server cannot read it, authentication may return 500."
+        fi
     fi
-  fi
 
-  # Дополнительная проверка защиты чувствительного файла.
-  if [ -f "$NEW_WEB_DIR/connection.js" ] && [ ! -f "$NEW_WEB_DIR/.htpasswd" ]; then
-    warn "connection.js содержит адреса серверов, но .htpasswd не найден. Проверьте защиту веб-панели." \
-         "connection.js contains server addresses, but .htpasswd was not found. Check web panel protection."
-  fi
+    # Дополнительная проверка защиты чувствительного файла.
+    if [ -f "$NEW_WEB_DIR/connection.js" ] && [ ! -f "$NEW_WEB_DIR/.htpasswd" ]; then
+        warn "connection.js содержит адреса серверов, но .htpasswd не найден. Проверьте защиту веб-панели." \
+             "connection.js contains server addresses, but .htpasswd was not found. Check web panel protection."
+    fi
 
-  success "Права веб-папки нормализованы: каталоги 755, файлы 644." \
-          "Web directory permissions normalized: directories 755, files 644."
+    success "Права веб-папки нормализованы: каталоги 755, файлы 644." \
+            "Web directory permissions normalized: directories 755, files 644."
 else
-  warn "WEB_DIR $NEW_WEB_DIR не найден после восстановления." \
-       "WEB_DIR $NEW_WEB_DIR not found after restore."
+    warn "WEB_DIR $NEW_WEB_DIR не найден после восстановления." \
+         "WEB_DIR $NEW_WEB_DIR not found after restore."
 fi
 
 # --- Предупреждение для старых qrsmp.html -------------------------------------
 if [ -s "$NEW_WEB_DIR/qrsmp.html" ] && ! grep -q "connection.js" "$NEW_WEB_DIR/qrsmp.html" 2>/dev/null; then
-  warn "Восстановленный qrsmp.html не использует connection.js. Для динамических адресов замените его обновлённой версией." \
-       "Restored qrsmp.html does not use connection.js. Replace it with the updated version for dynamic addresses."
+    warn "Восстановленный qrsmp.html не использует connection.js. Для динамических адресов замените его обновлённой версией." \
+         "Restored qrsmp.html does not use connection.js. Replace it with the updated version for dynamic addresses."
 fi
 
 # ==============================================================================
@@ -1257,11 +1557,16 @@ fi
 echo ""
 cat "$NEW_BASE_DIR/CONNECTION_DETAILS.txt"
 echo ""
+
 info "Статус контейнеров:" "Container status:"
 $COMPOSE_CMD ps
+
 echo ""
 success "Восстановление завершено." "Restore completed."
+
 if [ "$RESTORE_MODE" = "2" ]; then
     warn "Не забудьте: обновить DNS A-записи, проброс портов и брандмауэр для нового домена/IP, а также перенастроить Web Station на $NEW_WEB_DIR." \
          "Don't forget: update DNS A records, port forwarding and firewall for the new domain/IP, and reconfigure Web Station to point to $NEW_WEB_DIR."
 fi
+
+unset ARCH_PASS 2>/dev/null || true
