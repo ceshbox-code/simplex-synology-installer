@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # SimpleX Chat Server Suite Installer for Synology DSM 7.1+
-# Версия: 9.6
+# Версия: 9.8
 # ==============================================================================
 set -euo pipefail
 
@@ -882,6 +882,23 @@ else
 fi
 
 # ==============================================================================
+# 10c. ЗАГРУЗКА PASSNEW.SH
+# ==============================================================================
+info "Загрузка passnew.sh..." "Downloading passnew.sh..."
+
+PASSNEW_SCRIPT="$BASE_DIR/passnew.sh"
+
+if curl -fsSL --max-time 20 \
+  "https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/passnew.sh" \
+  -o "$PASSNEW_SCRIPT" 2>/dev/null; then
+  chmod 700 "$PASSNEW_SCRIPT"
+  success "passnew.sh загружен в $PASSNEW_SCRIPT" "passnew.sh downloaded to $PASSNEW_SCRIPT"
+else
+  warn "Не удалось загрузить passnew.sh. Скачайте вручную: curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/passnew.sh -o $PASSNEW_SCRIPT" \
+       "Failed to download passnew.sh. Download manually: curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/passnew.sh -o $PASSNEW_SCRIPT"
+fi
+
+# ==============================================================================
 # 11. STATUS-UPDATE.SH
 # ==============================================================================
 info "Создание скрипта обновления статуса..." "Creating status update script..."
@@ -1080,6 +1097,36 @@ chmod +x ${BASE_DIR}/restore.sh
 cd ${BASE_DIR} && sudo /bin/bash restore.sh</div>
 
 <a href="https://ceshbox-code.github.io/simplex-synology-installer/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;color:var(--purple-light);font-size:12px;font-weight:700;text-decoration:none">📖 Подробная инструкция по восстановлению →</a>
+</div>
+
+<div class="card">
+<div class="ct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Смена пароля веб-панели</div>
+
+<p style="color:var(--muted);font-size:12px;margin-bottom:10px;line-height:1.6">
+Скрипт <code style="background:var(--input-bg);padding:2px 5px;border-radius:5px;color:var(--code-text)">passnew.sh</code>
+генерирует новый пароль для
+<code style="background:var(--input-bg);padding:2px 5px;border-radius:5px;color:var(--code-text)">qrsmp.html</code>,
+позволяет изменить логин и записывает дату последней генерации в
+<code style="background:var(--input-bg);padding:2px 5px;border-radius:5px;color:var(--code-text)">CONNECTION_DETAILS.txt</code>.
+</p>
+
+<div class="code-block">curl -fsSL https://raw.githubusercontent.com/ceshbox-code/simplex-synology-installer/main/passnew.sh -o ${BASE_DIR}/passnew.sh
+chmod +x ${BASE_DIR}/passnew.sh
+cd ${BASE_DIR}
+sudo /bin/bash passnew.sh</div>
+
+<p style="color:var(--muted);font-size:11px;margin:8px 0">
+Если нужно сразу задать новый логин без запроса:
+</p>
+
+<div class="code-block">cd ${BASE_DIR}
+sudo /bin/bash passnew.sh new_login</div>
+
+<div class="box info">
+<strong>ℹ️ Примечание</strong>
+После смены пароля текущая сессия в браузере может сохраняться до перезагрузки страницы.
+При следующем открытии панели потребуется новый логин и пароль.
+</div>
 </div>
 
 <div class="sec">

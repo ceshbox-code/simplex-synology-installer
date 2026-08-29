@@ -365,8 +365,61 @@ mkdir -p "$NEW_BASE_DIR"
 tar -xzf "$SELECTED_ARCHIVE" -C "$NEW_BASE_DIR"
 success "Архив распакован." "Archive extracted."
 
+success "Архив распакован." "Archive extracted."
+
 chown -R 1000:1000 "$NEW_BASE_DIR/smp" "$NEW_BASE_DIR/xftp" 2>/dev/null || true
-chmod -R 750 "$NEW_BASE_DIR"
+
+# ==============================================================================
+# 6b. БЕЗОПАСНЫЕ ПРАВА ПОСЛЕ РАСПАКОВКИ
+# ------------------------------------------------------------------------------
+
+NEW_BASE_DIR="${NEW_BASE_DIR%/}"
+NEW_WEB_DIR="${NEW_WEB_DIR%/}"
+
+# Если веб-папка находится внутри базовой директории, базовая директория должна
+# быть проходимой для веб-сервера.
+# 751 разрешает вход/переход, но не даёт листинг содержимого.
+case "${NEW_WEB_DIR}/" in
+  "${NEW_BASE_DIR}/"*)
+    chmod 751 "$NEW_BASE_DIR" 2>/dev/null || true
+    ;;
+  *)
+    chmod 750 "$NEW_BASE_DIR" 2>/dev/null || true
+    ;;
+esac
+
+# SMP/XFTP: владельцем контейнерных данных остаётся 1000:1000.
+if [ -d "$NEW_BASE_DIR/smp" ]; then
+  find "$NEW_BASE_DIR/smp" -type d -exec chmod 750 {} + 2>/dev/null || true
+  find "$NEW_BASE_DIR/smp" -type f -exec chmod 640 {} + 2>/dev/null || true
+fi
+
+if [ -d "$NEW_BASE_DIR/xftp" ]; then
+  find "$NEW_BASE_DIR/xftp" -type d -exec chmod 750 {} + 2>/dev/null || true
+  find "$NEW_BASE_DIR/xftp" -type f -exec chmod 640 {} + 2>/dev/null || true
+fi
+
+# Секреты должны быть закрыты.
+chmod 600 "$NEW_BASE_DIR/.env" 2>/dev/null || true
+chmod 600 "$NEW_BASE_DIR/CONNECTION_DETAILS.txt" 2>/dev/null || true
+
+# Скрипты делаем исполняемыми точечно.
+for f in "$NEW_BASE_DIR/simplex-backup.sh" "$NEW_BASE_DIR/restore.sh" "$NEW_BASE_DIR/passnew.sh"; do
+  [ -f "$f" ] && chmod 700 "$f" 2>/dev/null || true
+done
+
+for f in "$NEW_BASE_DIR/status-update.sh"; do
+  [ -f "$f" ] && chmod 755 "$f" 2>/dev/null || true
+done
+
+# Резервные копии закрываем.
+if [ -d "$NEW_BASE_DIR/backups" ]; then
+  chmod 700 "$NEW_BASE_DIR/backups" 2>/dev/null || true
+  find "$NEW_BASE_DIR/backups" -type f -exec chmod 600 {} + 2>/dev/null || true
+fi
+
+success "Права базовой директории скорректированы без рекурсивного закрытия веб-файлов." \
+        "Base directory permissions adjusted without recursively locking web files."
 
 # ==============================================================================
 # 7. ОБНОВЛЕНИЕ .env И docker-compose.yml ПРИ НОВЫХ НАСТРОЙКАХ
@@ -747,17 +800,35 @@ fi
 # --- Восстановление веб-папки из архива, если она там есть -------------------
 if [ -d "$NEW_BASE_DIR/web" ]; then
   WEB_SRC_DIR=$(find "$NEW_BASE_DIR/web" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1)
+  [ -n "$WEB_SRC_DIR" ] || WEB_SRC_DIR="$NEW_BASE_DIR/web"
 
-  if [ -n "$WEB_SRC_DIR" ]; then
-    cp -a "$WEB_SRC_DIR/." "$NEW_WEB_DIR/"
-  else
-    cp -a "$NEW_BASE_DIR/web/." "$NEW_WEB_DIR/"
+  SKIP_WEB_MOVE=false
+
+  # Если целевая веб-папка и есть распакованная папка из архива,
+  # копировать и удалять её нельзя.
+  if [ "$NEW_WEB_DIR" = "$WEB_SRC_DIR" ]; then
+    SKIP_WEB_MOVE=true
   fi
 
-  rm -rf "$NEW_BASE_DIR/web"
+  # Если целевая веб-папка находится внутри временной распакованной веб-папки,
+  # удалять $NEW_BASE_DIR/web нельзя.
+  case "${NEW_WEB_DIR}/" in
+    "${NEW_BASE_DIR}/web/"*)
+      SKIP_WEB_MOVE=true
+      ;;
+  esac
 
-  success "Web-файлы восстановлены из архива в $NEW_WEB_DIR" \
-          "Web files restored from archive to $NEW_WEB_DIR"
+  if [ "$SKIP_WEB_MOVE" = false ]; then
+    mkdir -p "$NEW_WEB_DIR"
+    cp -a "$WEB_SRC_DIR/." "$NEW_WEB_DIR/"
+    rm -rf "$NEW_BASE_DIR/web"
+
+    success "Web-файлы восстановлены из архива в $NEW_WEB_DIR" \
+            "Web files restored from archive to $NEW_WEB_DIR"
+  else
+    success "Web-файлы уже находятся в целевой директории: $NEW_WEB_DIR" \
+            "Web files are already in the target directory: $NEW_WEB_DIR"
+  fi
 else
   warn "Web-файлы в архиве не найдены — создаётся минимальная веб-панель." \
        "No web files found in archive — creating minimal web panel."
@@ -792,6 +863,249 @@ write_connection_js "$NEW_BASE_DIR/CONNECTION_DETAILS.txt" "$NEW_WEB_DIR/connect
 
 success "connection.js сгенерирован из CONNECTION_DETAILS.txt." \
         "connection.js generated from CONNECTION_DETAILS.txt."
+
+# ==============================================================================
+# 9c. ГЕНЕРАЦИЯ ЛОГИНА И ПАРОЛЯ ДЛЯ WEB-ПАНЕЛИ
+# ------------------------------------------------------------------------------
+# Блок создаёт новый пароль для .htpasswd, позволяет изменить логин и
+# записывает данные входа в CONNECTION_DETAILS.txt.
+#
+# Старый .htpasswd при выборе генерации перезаписывается одним новым
+# пользователем.
+# ==============================================================================
+info "Настройка доступа к веб-панели..." "Setting up web panel access..."
+
+WEB_CRED_BEGIN="# === SIMPLEX WEB PANEL CREDENTIALS BEGIN ==="
+WEB_CRED_END="# === SIMPLEX WEB PANEL CREDENTIALS END ==="
+
+update_connection_details_web() {
+  local details="$1"
+  local login="$2"
+  local pass="$3"
+  local ts="$4"
+
+  local tmp_details
+  local tmp_block
+  local panel_url
+
+  tmp_details=$(mktemp)
+  tmp_block=$(mktemp)
+
+  panel_url=""
+  if [ -n "${NEW_MAIN_DOMAIN:-}" ]; then
+    panel_url="https://info.smp.${NEW_MAIN_DOMAIN}/qrsmp.html"
+  fi
+
+  {
+    echo "$WEB_CRED_BEGIN"
+    echo "🌐 ПАНЕЛЬ УПРАВЛЕНИЯ — ДАННЫЕ ВХОДА"
+    echo "Дата и время последней генерации: $ts"
+    echo "Логин / Login: $login"
+    echo "Пароль / Password: $pass"
+    echo "Файл паролей: $NEW_WEB_DIR/.htpasswd"
+    if [ -n "$panel_url" ]; then
+      echo "URL: $panel_url"
+    fi
+    echo "Команда смены пароля: sudo /bin/bash $NEW_BASE_DIR/passnew.sh"
+    echo "$WEB_CRED_END"
+  } > "$tmp_block"
+
+  if [ -f "$details" ]; then
+    if grep -qF "$WEB_CRED_BEGIN" "$details" && grep -qF "$WEB_CRED_END" "$details"; then
+      awk -v b="$WEB_CRED_BEGIN" -v e="$WEB_CRED_END" \
+        '$0==b{skip=1; next} $0==e{skip=0; next} !skip' "$details" > "$tmp_details"
+    else
+      cat "$details" > "$tmp_details"
+    fi
+
+    printf '\n' >> "$tmp_details"
+    cat "$tmp_details" "$tmp_block" > "$details"
+  else
+    cat "$tmp_block" > "$details"
+  fi
+
+  rm -f "$tmp_details" "$tmp_block"
+  chmod 600 "$details"
+}
+
+WEB_ACCESS_CHOICE="${WEB_ACCESS_CHOICE_OVERRIDE:-}"
+
+if [ -z "$WEB_ACCESS_CHOICE" ]; then
+  echo ""
+  if [ "$LANG_EN" = true ]; then
+    echo "Web panel access:"
+    echo "  1) Generate new login/password (recommended, old .htpasswd will be replaced)"
+    echo "  2) Keep existing .htpasswd from backup"
+  else
+    echo "Доступ к веб-панели:"
+    echo "  1) Сгенерировать новый логин/пароль (рекомендуется, старый .htpasswd будет заменён)"
+    echo "  2) Оставить существующий .htpasswd из бэкапа"
+  fi
+  echo ""
+
+  read -p "$( [ "$LANG_EN" = true ] && echo 'Your choice [1]: ' || echo 'Ваш выбор [1]: ' )" \
+    WEB_ACCESS_CHOICE < /dev/tty || true
+
+  WEB_ACCESS_CHOICE="${WEB_ACCESS_CHOICE:-1}"
+fi
+
+GENERATE_WEB_CREDENTIALS=false
+
+if [ "$WEB_ACCESS_CHOICE" != "2" ]; then
+  GENERATE_WEB_CREDENTIALS=true
+else
+  if [ ! -f "$NEW_WEB_DIR/.htpasswd" ]; then
+    warn "Выбрано сохранение существующего .htpasswd, но файл не найден. Будет создан новый пароль." \
+         "Keeping existing .htpasswd was selected, but the file was not found. A new password will be created."
+    GENERATE_WEB_CREDENTIALS=true
+  fi
+fi
+
+if [ "$GENERATE_WEB_CREDENTIALS" = true ]; then
+
+  WEB_LOGIN="${WEB_LOGIN_OVERRIDE:-}"
+
+  if [ -z "$WEB_LOGIN" ]; then
+    read -p "$( [ "$LANG_EN" = true ] && echo 'Web panel login [admin]: ' || echo 'Логин веб-панели [admin]: ' )" \
+      WEB_LOGIN < /dev/tty || true
+
+    WEB_LOGIN="${WEB_LOGIN:-admin}"
+  fi
+
+  if [[ ! "$WEB_LOGIN" =~ ^[A-Za-z0-9._@-]+$ ]]; then
+    warn "Некорректный логин. Разрешены только буквы, цифры и символы . _ @ -. Используется admin." \
+         "Invalid login. Allowed characters are letters, digits and . _ @ -. Using admin."
+    WEB_LOGIN="admin"
+  fi
+
+  WEB_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
+
+  if [ ${#WEB_PASS} -lt 16 ]; then
+    WEB_PASS="${WEB_PASS}$(openssl rand -hex 8)"
+    WEB_PASS="${WEB_PASS:0:16}"
+  fi
+
+  WEB_HASH=$(openssl passwd -apr1 "$WEB_PASS" 2>/dev/null || openssl passwd -1 "$WEB_PASS" || true)
+
+  if [ -z "$WEB_HASH" ]; then
+    error "Не удалось создать hash для пароля веб-панели." \
+          "Failed to create password hash for the web panel."
+  fi
+
+  mkdir -p "$NEW_WEB_DIR"
+
+  # Старый .htpasswd перезаписывается одним новым пользователем.
+  printf '%s:%s\n' "$WEB_LOGIN" "$WEB_HASH" > "$NEW_WEB_DIR/.htpasswd"
+
+  WEB_GROUP=""
+  if getent group http >/dev/null 2>&1; then
+    WEB_GROUP="http"
+  elif grep -q '^http:' /etc/group 2>/dev/null; then
+    WEB_GROUP="http"
+  fi
+
+  if [ -n "$WEB_GROUP" ]; then
+    chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+    chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+  else
+    chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+    chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+
+    warn "Группа http не найдена. .htpasswd закрыт правами 600. Если веб-сервер не может его прочитать, авторизация может возвращать 500." \
+         "http group not found. .htpasswd has 600 permissions. If the web server cannot read it, authentication may return 500."
+  fi
+
+  # Если .htaccess отсутствует, создаём базовую защиту.
+  if [ ! -f "$NEW_WEB_DIR/.htaccess" ]; then
+    cat > "$NEW_WEB_DIR/.htaccess" <<EOF
+<Files "qrsmp.html">
+AuthType Basic
+AuthName "SimpleX Control"
+AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+Require valid-user
+</Files>
+
+<Files "status.json">
+AuthType Basic
+AuthName "SimpleX Control"
+AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+Require valid-user
+</Files>
+
+<Files "connection.js">
+AuthType Basic
+AuthName "SimpleX Control"
+AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+Require valid-user
+</Files>
+EOF
+
+    chmod 644 "$NEW_WEB_DIR/.htaccess"
+  fi
+
+  # Если .htaccess уже есть, но connection.js не защищён, добавляем защиту.
+  if ! grep -q '<Files "connection.js">' "$NEW_WEB_DIR/.htaccess" 2>/dev/null; then
+    cat >> "$NEW_WEB_DIR/.htaccess" <<EOF
+
+<Files "connection.js">
+AuthType Basic
+AuthName "SimpleX Control"
+AuthUserFile ${NEW_WEB_DIR}/.htpasswd
+Require valid-user
+</Files>
+EOF
+
+    chmod 644 "$NEW_WEB_DIR/.htaccess"
+  fi
+
+  WEB_GEN_TS=$(date '+%Y-%m-%d %H:%M:%S')
+
+  update_connection_details_web \
+    "$NEW_BASE_DIR/CONNECTION_DETAILS.txt" \
+    "$WEB_LOGIN" \
+    "$WEB_PASS" \
+    "$WEB_GEN_TS"
+
+  success "Пароль веб-панели сгенерирован и записан в CONNECTION_DETAILS.txt." \
+          "Web panel password generated and saved to CONNECTION_DETAILS.txt."
+
+  echo ""
+  echo "----------------------------------------"
+  echo "Логин / Login: $WEB_LOGIN"
+  echo "Пароль / Password: $WEB_PASS"
+  echo "Дата и время: $WEB_GEN_TS"
+  echo "Файл: $NEW_WEB_DIR/.htpasswd"
+  echo "----------------------------------------"
+  echo ""
+
+  warn "Сохраните пароль. Старый пароль веб-панели был стёрт." \
+       "Save the password. The old web panel password has been erased."
+
+else
+
+  success "Использован существующий .htpasswd из бэкапа." \
+          "Existing .htpasswd from backup used."
+
+  WEB_GROUP=""
+  if getent group http >/dev/null 2>&1; then
+    WEB_GROUP="http"
+  elif grep -q '^http:' /etc/group 2>/dev/null; then
+    WEB_GROUP="http"
+  fi
+
+  if [ -f "$NEW_WEB_DIR/.htpasswd" ]; then
+    if [ -n "$WEB_GROUP" ]; then
+      chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+      chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+    else
+      chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+      chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+    fi
+  fi
+
+  warn "Пароль из бэкапа не отображается, так как .htpasswd хранит только hash." \
+       "The backup password is not shown because .htpasswd stores only a hash."
+fi
 
 # --- Если WEB_DIR изменился, чиним пути в .htaccess ---------------------------
 if [ -f "$NEW_WEB_DIR/.htaccess" ] && [ -n "${OLD_WEB_DIR:-}" ] && [ "$OLD_WEB_DIR" != "$NEW_WEB_DIR" ]; then
@@ -853,8 +1167,83 @@ else
   fi
 fi
 
-# --- Права на базовые веб-файлы -----------------------------------------------
-chmod 644 "$NEW_WEB_DIR/qrsmp.html" "$NEW_WEB_DIR/index.html" "$NEW_WEB_DIR/connection.js" 2>/dev/null || true
+# ==============================================================================
+# 9c. НОРМАЛИЗАЦИЯ ПРАВ WEB_DIR (ИСПРАВЛЕНИЕ 403)
+# ==============================================================================
+info "Нормализация прав веб-папки..." "Normalizing web directory permissions..."
+
+NEW_WEB_DIR="${NEW_WEB_DIR%/}"
+NEW_BASE_DIR="${NEW_BASE_DIR%/}"
+
+if [ -d "$NEW_WEB_DIR" ]; then
+
+  # Если веб-папка находится внутри базовой директории, нужно разрешить
+  # веб-серверу проход по родительским каталогам.
+  if [ "$NEW_WEB_DIR" != "$NEW_BASE_DIR" ]; then
+    case "${NEW_WEB_DIR}/" in
+      "${NEW_BASE_DIR}/"*)
+        REL_WEB_PATH="${NEW_WEB_DIR#${NEW_BASE_DIR}/}"
+        CUR_DIR="$NEW_BASE_DIR"
+
+        chmod 751 "$CUR_DIR" 2>/dev/null || true
+
+        IFS='/' read -r -a WEB_PATH_PARTS <<< "$REL_WEB_PATH"
+        WEB_PATH_LAST_INDEX=$(( ${#WEB_PATH_PARTS[@]} - 1 ))
+
+        for i in "${!WEB_PATH_PARTS[@]}"; do
+          CUR_DIR="$CUR_DIR/${WEB_PATH_PARTS[$i]}"
+
+          # Последний элемент — это сама веб-папка, ей позже поставим 755.
+          if [ "$i" -lt "$WEB_PATH_LAST_INDEX" ] && [ -d "$CUR_DIR" ]; then
+            chmod 751 "$CUR_DIR" 2>/dev/null || true
+          fi
+        done
+        ;;
+    esac
+  fi
+
+  # Сама веб-папка и вложенные каталоги должны быть проходимы и читаемы.
+  chmod 755 "$NEW_WEB_DIR" 2>/dev/null || true
+  find "$NEW_WEB_DIR" -type d -exec chmod 755 {} + 2>/dev/null || true
+
+  # Обычные веб-файлы должны читаться веб-сервером.
+  find "$NEW_WEB_DIR" -type f -exec chmod 644 {} + 2>/dev/null || true
+
+  # .htpasswd должен быть доступен веб-серверу, но не должен быть публичным.
+  if [ -f "$NEW_WEB_DIR/.htpasswd" ]; then
+    WEB_GROUP=""
+
+    if getent group http >/dev/null 2>&1; then
+      WEB_GROUP="http"
+    elif grep -q '^http:' /etc/group 2>/dev/null; then
+      WEB_GROUP="http"
+    fi
+
+    if [ -n "$WEB_GROUP" ]; then
+      chown root:"$WEB_GROUP" "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+      chmod 640 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+      success ".htpasswd: root:${WEB_GROUP}, права 640." \
+              ".htpasswd: root:${WEB_GROUP}, permissions 640."
+    else
+      chown root:root "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+      chmod 600 "$NEW_WEB_DIR/.htpasswd" 2>/dev/null || true
+      warn "Группа http не найдена. .htpasswd имеет права 600. Если веб-сервер не может его прочитать, авторизация может возвращать 500." \
+           "http group not found. .htpasswd has 600 permissions. If the web server cannot read it, authentication may return 500."
+    fi
+  fi
+
+  # Дополнительная проверка защиты чувствительного файла.
+  if [ -f "$NEW_WEB_DIR/connection.js" ] && [ ! -f "$NEW_WEB_DIR/.htpasswd" ]; then
+    warn "connection.js содержит адреса серверов, но .htpasswd не найден. Проверьте защиту веб-панели." \
+         "connection.js contains server addresses, but .htpasswd was not found. Check web panel protection."
+  fi
+
+  success "Права веб-папки нормализованы: каталоги 755, файлы 644." \
+          "Web directory permissions normalized: directories 755, files 644."
+else
+  warn "WEB_DIR $NEW_WEB_DIR не найден после восстановления." \
+       "WEB_DIR $NEW_WEB_DIR not found after restore."
+fi
 
 # --- Предупреждение для старых qrsmp.html -------------------------------------
 if [ -s "$NEW_WEB_DIR/qrsmp.html" ] && ! grep -q "connection.js" "$NEW_WEB_DIR/qrsmp.html" 2>/dev/null; then
