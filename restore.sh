@@ -1316,6 +1316,7 @@ if [ ! -s "$NEW_WEB_DIR/index.html" ]; then
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
 <meta charset="UTF-8">
 <meta http-equiv="refresh" content="0; url=qrsmp.html">
 <title>SimpleX Server</title>
