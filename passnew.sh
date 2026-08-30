@@ -134,153 +134,41 @@ HASH=$(openssl passwd -apr1 "$NEW_PASS" 2>/dev/null || openssl passwd -1 "$NEW_P
 # ==============================================================================
 # 5. Запись .htpasswd
 # ------------------------------------------------------------------------------
-# Фикс ошибки 500:
-# - удаляем возможные CR-символы;
-# - определяем пользователя/группу веб-сервера;
-# - делаем .htpasswd читаемым для веб-сервера;
-# - если группа не найдена, используем 644, но позже закрываем .htpasswd
-#   через .htaccess.
-# ==============================================================================
-NEW_LOGIN=$(printf '%s' "$NEW_LOGIN" | tr -d '\r\n')
-HASH=$(printf '%s' "$HASH" | tr -d '\r\n')
 
-[ -n "$NEW_LOGIN" ] || NEW_LOGIN="admin"
+umask 022
+
+# На DSM Web Station/Apache всегда работает от пользователя http.
+# Проверяем детерминированно, без ps-эвристик.
+WEB_USER="";  WEB_GROUP=""
+getent passwd http >/dev/null 2>&1 && WEB_USER="http"
+getent group  http >/dev/null 2>&1 && WEB_GROUP="http"
 
 TMP_HTPASSWD=$(mktemp)
 printf '%s:%s\n' "$NEW_LOGIN" "$HASH" > "$TMP_HTPASSWD"
 
-WEB_SERVER_USER=""
-for PATTERN in '[a]pache' '[h]ttpd' '[n]ginx'; do
-  CANDIDATE=$(ps aux 2>/dev/null | grep -E "$PATTERN" | awk '{print $1}' | grep -v '^root$' | head -n 1 || true)
-  if [ -n "$CANDIDATE" ]; then
-    WEB_SERVER_USER="$CANDIDATE"
-    break
-  fi
-done
-
-WEB_GROUP=""
-if [ -n "$WEB_SERVER_USER" ]; then
-  WEB_GROUP=$(id -gn "$WEB_SERVER_USER" 2>/dev/null || true)
-fi
-
-if [ -z "$WEB_GROUP" ] && getent group http >/dev/null 2>&1; then
-  WEB_GROUP="http"
-elif [ -z "$WEB_GROUP" ] && grep -q '^http:' /etc/group 2>/dev/null; then
-  WEB_GROUP="http"
-fi
-
 if [ -n "$WEB_GROUP" ]; then
-  if ! chown root:"$WEB_GROUP" "$TMP_HTPASSWD" 2>/dev/null; then
-    WEB_GROUP=""
-  fi
-fi
-
-if [ -n "$WEB_GROUP" ]; then
-  chmod 640 "$TMP_HTPASSWD"
-  success "Права .htpasswd будут установлены в root:${WEB_GROUP}, 640." \
-          ".htpasswd permissions will be set to root:${WEB_GROUP}, 640."
+  chown root:"$WEB_GROUP" "$TMP_HTPASSWD"
+  chmod 640 "$TMP_HTPASSWD"          # читает только root и группа http
 else
-  chown root:root "$TMP_HTPASSWD"
-  chmod 644 "$TMP_HTPASSWD"
-  warn "Группа веб-сервера не определена. .htpasswd будет 644, но доступ к нему будет закрыт через .htaccess." \
-       "Web server group not detected. .htpasswd will be 644, but access to it will be denied via .htaccess."
+  chmod 644 "$TMP_HTPASSWD"          # НЕ 600! Apache обязан читать файл
 fi
+mv -f "$TMP_HTPASSWD" "$WEB_DIR/.htpasswd"
 
-mv "$TMP_HTPASSWD" "$WEB_DIR/.htpasswd"
-
-success ".htpasswd обновлён: $WEB_DIR/.htpasswd" \
-        ".htpasswd updated: $WEB_DIR/.htpasswd"
-
-# ==============================================================================
-# 5b. Пересоздание .htaccess и нормализация прав веб-папки
-# ------------------------------------------------------------------------------
-# Фикс ошибки 500:
-# - .htaccess пересоздаётся с корректным AuthUserFile;
-# - .htpasswd и .htaccess закрываются от доступа по HTTP;
-# - права веб-папки приводятся к виду, понятному веб-серверу.
-# ==============================================================================
-HTACCESS_FILE="$WEB_DIR/.htaccess"
-
-if [ -f "$HTACCESS_FILE" ]; then
-  cp -a "$HTACCESS_FILE" "${HTACCESS_FILE}.bak-$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
-fi
-
-# Если веб-папка находится внутри BASE_DIR, разрешаем проход по родительским
-# директориям, но не открываем листинг.
-if [ "${WEB_DIR:-}" != "${BASE_DIR:-}" ]; then
-  case "${WEB_DIR}/" in
-    "${BASE_DIR}/"*)
-      chmod 751 "$BASE_DIR" 2>/dev/null || true
-
-      REL_WEB="${WEB_DIR#${BASE_DIR}/}"
-      CUR_DIR="$BASE_DIR"
-
-      IFS='/' read -r -a WEB_PARTS <<< "$REL_WEB"
-      WEB_LAST_INDEX=$(( ${#WEB_PARTS[@]} - 1 ))
-
-      for i in "${!WEB_PARTS[@]}"; do
-        CUR_DIR="$CUR_DIR/${WEB_PARTS[$i]}"
-        if [ "$i" -lt "$WEB_LAST_INDEX" ] && [ -d "$CUR_DIR" ]; then
-          chmod 751 "$CUR_DIR" 2>/dev/null || true
-        fi
-      done
-      ;;
-  esac
-fi
-
-# Нормализуем права веб-папки.
+# Нормализация веб-папки, БЕЗ затрагивания .htpasswd
 chmod 755 "$WEB_DIR" 2>/dev/null || true
 find "$WEB_DIR" -type d -exec chmod 755 {} + 2>/dev/null || true
-find "$WEB_DIR" -type f -exec chmod 644 {} + 2>/dev/null || true
+find "$WEB_DIR" -type f ! -name '.htpasswd' -exec chmod 644 {} + 2>/dev/null || true
 
-# Пересоздаём .htaccess.
-cat > "$HTACCESS_FILE" <<EOF
-<Files ".htpasswd">
-Require all denied
-</Files>
-
-<Files ".htaccess">
-Require all denied
-</Files>
-
-<Files "qrsmp.html">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${WEB_DIR}/.htpasswd
-Require valid-user
-</Files>
-
-<Files "status.json">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${WEB_DIR}/.htpasswd
-Require valid-user
-</Files>
-
-<Files "connection.js">
-AuthType Basic
-AuthName "SimpleX Control"
-AuthUserFile ${WEB_DIR}/.htpasswd
-Require valid-user
-</Files>
-EOF
-
-tr -d '\r' < "$HTACCESS_FILE" > "${HTACCESS_FILE}.tmp" && mv "${HTACCESS_FILE}.tmp" "$HTACCESS_FILE"
-chmod 644 "$HTACCESS_FILE"
-
-# После chmod 644 на все файлы возвращаем безопасные права для .htpasswd.
-if [ -f "$WEB_DIR/.htpasswd" ]; then
-  if [ -n "${WEB_GROUP:-}" ]; then
-    chown root:"$WEB_GROUP" "$WEB_DIR/.htpasswd" 2>/dev/null || true
-    chmod 640 "$WEB_DIR/.htpasswd" 2>/dev/null || true
+# САМОПРОВЕРКА: веб-пользователь реально может прочитать файл
+if [ -n "$WEB_USER" ]; then
+  if runuser -u "$WEB_USER" -- cat "$WEB_DIR/.htpasswd" >/dev/null 2>&1; then
+    success ".htpasswd доступен пользователю $WEB_USER." \
+            ".htpasswd is readable by $WEB_USER."
   else
-    chown root:root "$WEB_DIR/.htpasswd" 2>/dev/null || true
-    chmod 644 "$WEB_DIR/.htpasswd" 2>/dev/null || true
+    error ".htpasswd НЕ читается пользователем $WEB_USER — 500 гарантирована. Проверьте права." \
+          ".htpasswd is NOT readable by $WEB_USER — 500 guaranteed. Check permissions."
   fi
 fi
-
-success ".htaccess пересоздан/обновлён: $HTACCESS_FILE" \
-        ".htaccess recreated/updated: $HTACCESS_FILE"
 
 # ==============================================================================
 # 6. Запись в CONNECTION_DETAILS.txt
