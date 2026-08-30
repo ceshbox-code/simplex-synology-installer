@@ -1297,15 +1297,11 @@ elif grep -q '^http:' /etc/group 2>/dev/null; then
     WEB_GROUP="http"
 fi
 
-if [ ! -f "$WEB_DIR/.htpasswd" ]; then
-    WEB_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
-    HASH=$(openssl passwd -apr1 "$WEB_PASS")
-    printf 'admin:%s\n' "$HASH" > "$WEB_DIR/.htpasswd"
-else
-    warn ".htpasswd уже существует. Пароль не изменён." \
-         ".htpasswd already exists. Password not changed."
-    WEB_PASS=""
-fi
+info "Генерация нового пароля для веб-панели..." "Generating new password for web panel..."
+WEB_PASS=$(openssl rand -base64 16 | tr -d '/+=' | cut -c1-16)
+HASH=$(openssl passwd -apr1 "$WEB_PASS")
+printf 'admin:%s\n' "$HASH" > "$WEB_DIR/.htpasswd"
+success "Новый пароль для веб-панели сгенерирован." "New web panel password generated."
 
 if [ -n "$WEB_GROUP" ]; then
     chown root:"$WEB_GROUP" "$WEB_DIR/.htpasswd"
@@ -1382,7 +1378,7 @@ RESULT_FILE="$BASE_DIR/CONNECTION_DETAILS.txt"
     echo "URL: https://info.smp.${MAIN_DOMAIN}  (сначала настройте HTTPS-сертификат в Web Station!)"
     echo "⚠️  До настройки HTTPS сертификата пароль передаётся в открытом виде."
     echo "Логин / Login: admin"
-    echo "Пароль / Password: ${WEB_PASS:-см. существующий .htpasswd / see existing .htpasswd}"
+    echo "Пароль / Password: ${WEB_PASS}"
     echo ""
     echo "📁 ФАЙЛЫ:"
     echo "Конфигурация / Config: $BASE_DIR/.env"
