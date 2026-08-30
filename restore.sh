@@ -822,12 +822,18 @@ else
 fi
 
 # ==============================================================================
-# 7b. ПЕРЕВЫПУСК Ed25519-СЕРТИФИКАТА ТРАНСПОРТА SMP (при необходимости)
+# 7b. ПЕРЕВЫПУСК ТРАНСПОРТНОГО СЕРТИФИКАТА ТРАНСПОРТА SMP (при необходимости)
 # ------------------------------------------------------------------------------
 # Срабатывает если: (а) при проверке архива обнаружен неверный алгоритм ключа
 # (NEEDS_CERT_REPAIR=1), либо (б) домен был изменён (DOMAIN_CHANGED=1) — в
 # обоих случаях нужен новый server.key/server.crt с CN=текущий SMP-домен,
 # подписанный СУЩЕСТВУЮЩИМ ca.key, чтобы Fingerprint не изменился.
+#
+# ИСПРАВЛЕНИЕ: системный OpenSSL Synology DSM может не поддерживать
+# Ed25519 (genpkey / req / x509). Добавлен многоуровневый fallback:
+#   1) системный openssl
+#   2) Docker-образ simplexchat/smp-server:v6.5.2 (уже загружен)
+#   3) Docker-образ alpine/openssl:latest
 # ==============================================================================
 if [ "${NEEDS_CERT_REPAIR:-0}" = "1" ] || [ "${DOMAIN_CHANGED:-0}" = "1" ]; then
     echo ""
@@ -836,15 +842,16 @@ if [ "${NEEDS_CERT_REPAIR:-0}" = "1" ] || [ "${DOMAIN_CHANGED:-0}" = "1" ]; then
 
     SMP_CONFIG_DIR="$NEW_BASE_DIR/smp/config"
 
+    # --- Проверка наличия CA ---------------------------------------------------
     if [ ! -s "$SMP_CONFIG_DIR/ca.key" ] || [ ! -s "$SMP_CONFIG_DIR/ca.crt" ]; then
         error "Не найден ca.key/ca.crt в восстановленных данных — автоматический перевыпуск невозможен. Выберите другой архив бэкапа или переинициализируйте SMP вручную." \
               "ca.key/ca.crt not found in restored data — automatic reissue not possible. Choose a different backup archive or re-initialize SMP manually."
     fi
 
+    # --- Подготовка openssl_server.conf -----------------------------------------
     if [ ! -s "$SMP_CONFIG_DIR/openssl_server.conf" ]; then
         warn "openssl_server.conf отсутствует — создаётся с параметрами по умолчанию." \
              "openssl_server.conf missing — creating with default parameters."
-
         cat > "$SMP_CONFIG_DIR/openssl_server.conf" << SRVCONF
 [req]
 distinguished_name = req_distinguished_name
@@ -863,40 +870,202 @@ SRVCONF
         sed -i "s/^CN = .*/CN = $NEW_SMP_DOMAIN/" "$SMP_CONFIG_DIR/openssl_server.conf"
     fi
 
+    # --- Резервное копирование битых файлов ------------------------------------
     BROKEN_BACKUP_DIR="$SMP_CONFIG_DIR/broken-rsa-backup"
     mkdir -p "$BROKEN_BACKUP_DIR"
-
     TS=$(date +%s)
-
     [ -f "$SMP_CONFIG_DIR/server.crt" ] && mv "$SMP_CONFIG_DIR/server.crt" "$BROKEN_BACKUP_DIR/server.crt.$TS"
     [ -f "$SMP_CONFIG_DIR/server.key" ] && mv "$SMP_CONFIG_DIR/server.key" "$BROKEN_BACKUP_DIR/server.key.$TS"
     [ -f "$SMP_CONFIG_DIR/server.csr" ] && mv "$SMP_CONFIG_DIR/server.csr" "$BROKEN_BACKUP_DIR/server.csr.$TS"
 
-    openssl genpkey -algorithm ED25519 -out "$SMP_CONFIG_DIR/server.key" 2>/dev/null || \
-        error "Не удалось сгенерировать Ed25519-ключ." "Failed to generate Ed25519 key."
+    # ==========================================================================
+    # ОПРЕДЕЛЕНИЕ: поддерживает ли системный openssl Ed25519?
+    # ==========================================================================
+    USE_SYSTEM_OPENSSL=false
+    ED25519_TEST_KEY=$(mktemp /tmp/simplex_ed25519_test.XXXXXX.key)
+    if openssl genpkey -algorithm ED25519 -out "$ED25519_TEST_KEY" 2>/dev/null; then
+        USE_SYSTEM_OPENSSL=true
+        info "Системный openssl поддерживает Ed25519." \
+             "System openssl supports Ed25519."
+    else
+        warn "Системный openssl НЕ поддерживает Ed25519 — будет использован Docker." \
+             "System openssl does NOT support Ed25519 — Docker will be used."
+    fi
+    rm -f "$ED25519_TEST_KEY" 2>/dev/null || true
 
-    openssl req -new -key "$SMP_CONFIG_DIR/server.key" -out "$SMP_CONFIG_DIR/server.csr" \
-        -config "$SMP_CONFIG_DIR/openssl_server.conf" 2>/dev/null || \
-        error "Не удалось создать CSR." "Failed to create CSR."
+    # ==========================================================================
+    # ФУНКЦИЯ: выполнить openssl-команду через Docker
+    # Аргументы: те же, что у openssl (без слова "openssl")
+    # Рабочая директория контейнера = $SMP_CONFIG_DIR (монтируется в /certs)
+    # ==========================================================================
+    docker_openssl() {
+        # Пробуем образы по порядку приоритета
+        local img
+        for img in "simplexchat/smp-server:v6.5.2" "alpine/openssl:latest"; do
+            # Для smp-server нужен --entrypoint "", т.к. entrypoint по умолчанию
+            # запускает сам сервер. Для alpine/openssl entrypoint = "openssl",
+            # поэтому передаём аргументы без слова "openssl".
+            case "$img" in
+                simplexchat/smp-server:*)
+                    if docker run --rm --entrypoint "" \
+                        -v "$SMP_CONFIG_DIR:/certs" \
+                        "$img" \
+                        openssl "$@" 2>/dev/null; then
+                        return 0
+                    fi
+                    ;;
+                alpine/openssl:*)
+                    # alpine/openssl: entrypoint уже "openssl",
+                    # но для надёжности используем явный вызов
+                    if docker run --rm --entrypoint "openssl" \
+                        -v "$SMP_CONFIG_DIR:/certs" \
+                        "$img" \
+                        "$@" 2>/dev/null; then
+                        return 0
+                    fi
+                    ;;
+            esac
+        done
+        return 1
+    }
 
-    openssl x509 -req -in "$SMP_CONFIG_DIR/server.csr" \
-        -CA "$SMP_CONFIG_DIR/ca.crt" -CAkey "$SMP_CONFIG_DIR/ca.key" \
-        -CAserial "$SMP_CONFIG_DIR/ca.srl" -CAcreateserial \
-        -out "$SMP_CONFIG_DIR/server.crt" -days 3650 \
-        -extfile "$SMP_CONFIG_DIR/openssl_server.conf" -extensions v3 2>/dev/null || \
-        error "Не удалось подписать сертификат существующим CA." \
-              "Failed to sign certificate with existing CA."
+    # ==========================================================================
+    # ШАГ 1: Генерация Ed25519-ключа
+    # ==========================================================================
+    info "Генерация Ed25519-ключа..." "Generating Ed25519 key..."
 
-    chown 1000:1000 "$SMP_CONFIG_DIR/server.key" "$SMP_CONFIG_DIR/server.crt" "$SMP_CONFIG_DIR/server.csr"
-    chmod 750 "$SMP_CONFIG_DIR/server.key" "$SMP_CONFIG_DIR/server.crt" "$SMP_CONFIG_DIR/server.csr"
+    if [ "$USE_SYSTEM_OPENSSL" = true ]; then
+        if ! openssl genpkey -algorithm ED25519 \
+            -out "$SMP_CONFIG_DIR/server.key" 2>/tmp/simplex_ed25519_err.log; then
+            warn "Системный openssl не смог сгенерировать ключ: $(cat /tmp/simplex_ed25519_err.log 2>/dev/null)" \
+                 "System openssl failed to generate key: $(cat /tmp/simplex_ed25519_err.log 2>/dev/null)"
+            USE_SYSTEM_OPENSSL=false
+        fi
+    fi
 
-    if openssl verify -CAfile "$SMP_CONFIG_DIR/ca.crt" "$SMP_CONFIG_DIR/server.crt" >/dev/null 2>&1; then
+    if [ "$USE_SYSTEM_OPENSSL" = false ]; then
+        if ! docker_openssl genpkey -algorithm ED25519 -out /certs/server.key; then
+            error "Не удалось сгенерировать Ed25519-ключ ни системным openssl, ни через Docker. Проверьте, что образы доступны: docker pull alpine/openssl:latest" \
+                  "Failed to generate Ed25519 key with both system openssl and Docker. Verify images are available: docker pull alpine/openssl:latest"
+        fi
+        success "Ed25519-ключ сгенерирован через Docker." \
+                "Ed25519 key generated via Docker."
+    else
+        success "Ed25519-ключ сгенерирован системным openssl." \
+                "Ed25519 key generated with system openssl."
+    fi
+
+    # ==========================================================================
+    # ШАГ 2: Создание CSR
+    # ==========================================================================
+    info "Создание CSR..." "Creating CSR..."
+
+    if [ "$USE_SYSTEM_OPENSSL" = true ]; then
+        if ! openssl req -new \
+            -key "$SMP_CONFIG_DIR/server.key" \
+            -out "$SMP_CONFIG_DIR/server.csr" \
+            -config "$SMP_CONFIG_DIR/openssl_server.conf" 2>/tmp/simplex_ed25519_err.log; then
+            warn "Системный openssl не смог создать CSR: $(cat /tmp/simplex_ed25519_err.log 2>/dev/null)" \
+                 "System openssl failed to create CSR: $(cat /tmp/simplex_ed25519_err.log 2>/dev/null)"
+            USE_SYSTEM_OPENSSL=false
+        fi
+    fi
+
+    if [ "$USE_SYSTEM_OPENSSL" = false ]; then
+        if ! docker_openssl req -new \
+            -key /certs/server.key \
+            -out /certs/server.csr \
+            -config /certs/openssl_server.conf; then
+            error "Не удалось создать CSR ни системным openssl, ни через Docker." \
+                  "Failed to create CSR with both system openssl and Docker."
+        fi
+        success "CSR создан через Docker." "CSR created via Docker."
+    else
+        success "CSR создан системным openssl." "CSR created with system openssl."
+    fi
+
+    # ==========================================================================
+    # ШАГ 3: Подписание сертификата существующим CA
+    # ==========================================================================
+    info "Подписание сертификата существующим CA..." \
+         "Signing certificate with existing CA..."
+
+    if [ "$USE_SYSTEM_OPENSSL" = true ]; then
+        if ! openssl x509 -req \
+            -in "$SMP_CONFIG_DIR/server.csr" \
+            -CA "$SMP_CONFIG_DIR/ca.crt" \
+            -CAkey "$SMP_CONFIG_DIR/ca.key" \
+            -CAserial "$SMP_CONFIG_DIR/ca.srl" \
+            -CAcreateserial \
+            -out "$SMP_CONFIG_DIR/server.crt" \
+            -days 3650 \
+            -extfile "$SMP_CONFIG_DIR/openssl_server.conf" \
+            -extensions v3 2>/tmp/simplex_ed25519_err.log; then
+            warn "Системный openssl не смог подписать сертификат: $(cat /tmp/simplex_ed25519_err.log 2>/dev/null)" \
+                 "System openssl failed to sign certificate: $(cat /tmp/simplex_ed25519_err.log 2>/dev/null)"
+            USE_SYSTEM_OPENSSL=false
+        fi
+    fi
+
+    if [ "$USE_SYSTEM_OPENSSL" = false ]; then
+        if ! docker_openssl x509 -req \
+            -in /certs/server.csr \
+            -CA /certs/ca.crt \
+            -CAkey /certs/ca.key \
+            -CAserial /certs/ca.srl \
+            -CAcreateserial \
+            -out /certs/server.crt \
+            -days 3650 \
+            -extfile /certs/openssl_server.conf \
+            -extensions v3; then
+            error "Не удалось подписать сертификат существующим CA (ни openssl, ни Docker)." \
+                  "Failed to sign certificate with existing CA (neither openssl nor Docker)."
+        fi
+        success "Сертификат подписан через Docker." "Certificate signed via Docker."
+    else
+        success "Сертификат подписан системным openssl." \
+                "Certificate signed with system openssl."
+    fi
+
+    # ==========================================================================
+    # ШАГ 4: Права
+    # ==========================================================================
+    chown 1000:1000 "$SMP_CONFIG_DIR/server.key" \
+                    "$SMP_CONFIG_DIR/server.crt" \
+                    "$SMP_CONFIG_DIR/server.csr" 2>/dev/null || true
+    chmod 750 "$SMP_CONFIG_DIR/server.key" \
+              "$SMP_CONFIG_DIR/server.crt" \
+              "$SMP_CONFIG_DIR/server.csr" 2>/dev/null || true
+
+    # ==========================================================================
+    # ШАГ 5: Верификация подписи
+    # ==========================================================================
+    info "Проверка подписи нового сертификата..." \
+         "Verifying new certificate signature..."
+
+    VERIFY_OK=false
+    if [ "$USE_SYSTEM_OPENSSL" = true ]; then
+        if openssl verify -CAfile "$SMP_CONFIG_DIR/ca.crt" \
+            "$SMP_CONFIG_DIR/server.crt" >/dev/null 2>&1; then
+            VERIFY_OK=true
+        fi
+    fi
+    if [ "$VERIFY_OK" = false ]; then
+        if docker_openssl verify -CAfile /certs/ca.crt /certs/server.crt; then
+            VERIFY_OK=true
+        fi
+    fi
+
+    if [ "$VERIFY_OK" = true ]; then
         success "Сертификат SMP перевыпущен и подписан существующим CA (Fingerprint не изменился). Битые файлы сохранены в $BROKEN_BACKUP_DIR" \
                 "SMP certificate reissued and signed by the existing CA (Fingerprint unchanged). Broken files saved to $BROKEN_BACKUP_DIR"
     else
         error "Новый сертификат не прошёл проверку подписи CA — перевыпуск не удался." \
               "New certificate failed CA signature verification — reissue failed."
     fi
+
+    # --- Уборка временных файлов -----------------------------------------------
+    rm -f /tmp/simplex_ed25519_err.log 2>/dev/null || true
 fi
 
 # ==============================================================================
